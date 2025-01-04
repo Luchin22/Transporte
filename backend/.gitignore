@@ -1,0 +1,43 @@
+# Node modules
+node_modules/
+
+# Entorno de producción
+.env
+.env.test
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Directorio de cobertura de pruebas
+coverage/
+
+# Archivos de configuración del sistema
+.DS_Store
+Thumbs.db
+
+# Directorios temporales
+tmp/
+temp/
+
+# Directorio de caché de Sequelize (si es necesario)
+.sequelize-cache/
+
+# Archivos de configuración de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos de paquetes o dependencias locales
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
