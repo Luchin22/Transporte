@@ -1,115 +1,200 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert, Platform } from 'react-native';
-import * as Print from 'expo-print';
-import { shareAsync } from 'expo-sharing';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useUser } from '../context/UserContext'; // Importa el hook del contexto
+import axios from 'axios';
 
-const PagoScreen = ({ route }) => {
-  const { numTickets = 0, selectedSeats = [], salida = 'Ciudad A', destino = 'Ciudad B', fecha = '2024-12-25', nombre = 'Juan Pérez' } = route.params || {};
+const BusSeats = ({ navigation, route }) => {
+  const { userData, loading } = useUser();
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const [tarjeta, setTarjeta] = useState('');
-  const [expiracion, setExpiracion] = useState('');
-  const [cvv, setCvv] = useState('');
+  const [selectedSeats, setSelectedSeats] = useState([]); // Asientos seleccionados
+  const [numSeats, setNumSeats] = useState(1); // Número de asientos seleccionados
+  const [occupiedSeats, setOccupiedSeats] = useState([]); // Asientos ocupados desde la API
 
-  // Función para generar y compartir el PDF
-  const printToFile = async () => {
-    const html = `
-      <html>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
-        </head>
-        <body style="text-align: center;">
-          <h1 style="font-size: 50px; font-family: Helvetica Neue; font-weight: normal;">
-            Confirmación de Compra
-          </h1>
-          <p style="font-size: 24px; font-family: Helvetica Neue; font-weight: normal;">
-            Nombre: ${nombre}
-          </p>
-          <p style="font-size: 24px; font-family: Helvetica Neue; font-weight: normal;">
-            Fecha: ${fecha}
-          </p>
-          <p style="font-size: 24px; font-family: Helvetica Neue; font-weight: normal;">
-            Salida: ${salida} - Destino: ${destino}
-          </p>
-          <p style="font-size: 24px; font-family: Helvetica Neue; font-weight: normal;">
-            Boletos: ${numTickets} - Asientos: ${selectedSeats.join(', ')}
-          </p>
-        </body>
-      </html>
-    `;
+ 
 
-    try {
-      // Generar el archivo PDF
-      const { uri } = await Print.printToFileAsync({ html });
-      console.log('Archivo generado en:', uri);
-      
-      // Compartir el archivo PDF
-      await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
-      Alert.alert('Éxito', 'El PDF ha sido generado y compartido.');
-    } catch (error) {
-      console.error('Error al generar o compartir el PDF: ', error);
-      Alert.alert('Error', 'Hubo un error al generar o compartir el PDF.');
-    }
+  const {
+    selectedOrigin,
+    selectedDestination,
+    horaSalida,
+    horaLlegada,
+    fechaIda,
+    idBus,
+    numeroBus,
+    capacidad,
+    nombreConductor,
+  } = route.params;
+  const menuOptions = [
+    { id: 1, name: 'Editar', screen: 'Editar', icon: 'edit' },
+    { id: 2, name: 'Historial', screen: 'Historial', icon: 'history' },
+    { id: 3, name: 'Payment', screen: 'Payment', icon: 'payment' },
+    { id: 4, name: 'Salir', screen: 'Login', icon: 'logout' },
+  ]; 
+  const handleNavigation = (screen) => {
+    navigation.navigate(screen, { usuario_id: userData?.usuario_id });
   };
 
-  // Confirmación del pago
-  const handleConfirmarPago = () => {
-    if (!tarjeta || !expiracion || !cvv) {
-      Alert.alert('Error', 'Por favor, completa todos los campos de la tarjeta.');
+
+
+  useEffect(() => {
+    const fetchOccupiedSeats = async () => {
+      try {
+        // Realizar la solicitud al endpoint de asientos ocupados
+        const response = await axios.get('http://192.168.0.139:3000/api/asientos');
+        
+        // Filtrar asientos ocupados por bus, estado y fecha
+        const occupied = response.data
+          .filter(
+            (asiento) =>
+              asiento.id_bus === idBus && // Coincidencia por ID de bus
+              asiento.estado === 'ocupado' && // Estado ocupado
+              asiento.fecha_asiento === fechaIda // Coincidencia por fecha
+          )
+          .flatMap((asiento) => asiento.numero.split(',').map(num => parseInt(num, 10))); // Dividir y convertir los números a enteros
+        
+        setOccupiedSeats(occupied); // Actualizar el estado con los asientos ocupados
+      } catch (error) {
+        console.error('Error fetching occupied seats:', error);
+        Alert.alert('Error', 'No se pudieron cargar los asientos ocupados.');
+      }
+    };
+  
+    fetchOccupiedSeats();
+  }, [idBus, fechaIda]);
+  
+  
+
+  const toggleSeat = (seatNumber) => {
+    if (occupiedSeats.includes(seatNumber)) {
+      Alert.alert('Aviso', 'Este asiento está ocupado.');
       return;
     }
 
-    setModalVisible(false);
-    Alert.alert('Éxito', 'Pago realizado con éxito.');
-    printToFile(); // Crear y compartir el PDF después del pago
+    if (selectedSeats.includes(seatNumber)) {
+      setSelectedSeats((prevSelectedSeats) =>
+        prevSelectedSeats.filter((seat) => seat !== seatNumber)
+      );
+    } else if (selectedSeats.length < numSeats) {
+      setSelectedSeats((prevSelectedSeats) => [...prevSelectedSeats, seatNumber]);
+    } else {
+      Alert.alert('Aviso', `Solo puedes seleccionar ${numSeats} asientos.`);
+    }
+  };
+
+  const handleNumSeatsChange = (newNumSeats) => {
+    setNumSeats(newNumSeats);
+
+    // Si hay asientos seleccionados, ajustarlos según el nuevo límite
+    setSelectedSeats((prevSelectedSeats) =>
+      prevSelectedSeats.slice(0, newNumSeats)
+    );
+
+    console.log(`Cantidad de asientos a seleccionar: ${newNumSeats}`);
+  };
+  const renderSeats = () => {
+    const rows = [];
+    const seatsPerRow = 4; // Asientos por fila
+    const totalRows = Math.ceil(capacidad / seatsPerRow);
+  
+    for (let i = 0; i < totalRows; i++) {
+      const rowSeats = [];
+      for (let j = 0; j < seatsPerRow; j++) {
+        const seatNumber = i * seatsPerRow + j + 1; // Calcular número dinámicamente
+        if (seatNumber > capacidad) break; // No generar asientos fuera de rango
+        
+        const isOccupied = occupiedSeats.includes(seatNumber); // Verificar si el asiento está ocupado
+  
+        rowSeats.push(
+          <TouchableOpacity
+            key={seatNumber}
+            style={[
+              styles.seat,
+              isOccupied && styles.occupiedSeat, // Aplicar estilo si está ocupado
+              selectedSeats.includes(seatNumber) && styles.selectedSeat,
+            ]}
+            onPress={() => !isOccupied && toggleSeat(seatNumber)} // Solo seleccionar si no está ocupado
+            disabled={isOccupied} // Deshabilitar si está ocupado
+          >
+            <Text style={styles.seatText}>{seatNumber}</Text>
+          </TouchableOpacity>
+        );
+      }
+  
+      rows.push(
+        <View key={i} style={styles.row}>
+          {rowSeats.slice(0, 2)} {/* Lado izquierdo */}
+          <View style={styles.pasillo} /> {/* Pasillo */}
+          {rowSeats.slice(2)} {/* Lado derecho */}
+        </View>
+      );
+    }
+  
+    return rows;
+  };
+  
+  const handlePago = () => {
+    if (selectedSeats.length !== numSeats) {
+      Alert.alert('Error', `Debes seleccionar exactamente ${numSeats} asientos.`);
+      return;
+    }
+
+    navigation.navigate('Pago', {
+      numTickets: numSeats,
+      selectedSeats,
+      origen: selectedOrigin,
+      destino: selectedDestination,
+      salida: horaSalida,
+      llegada: horaLlegada,
+      nombreC: nombreConductor,
+      numeroBus: numeroBus,
+      fechaIda: fechaIda,
+      idBus: idBus,
+    });
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Pago</Text>
-      <Text style={styles.text}>Nombre: {nombre}</Text>
-      <Text style={styles.text}>Fecha: {fecha}</Text>
-      <Text style={styles.text}>Salida: {salida}</Text>
-      <Text style={styles.text}>Destino: {destino}</Text>
-      <Text style={styles.text}>Total de boletos seleccionados: {numTickets}</Text>
-      <Text style={styles.text}>Asientos seleccionados: {selectedSeats.join(', ')}</Text>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <Text style={styles.title}>Selecciona la cantidad de asientos</Text>
+        <Text>{`Origen: ${selectedOrigin}, Destino: ${selectedDestination}`}</Text>
+        <Text>{`ID Bus: ${idBus}`}</Text>
+        <Text>{`Numero Bus: ${numeroBus}`}</Text>
+        <Text>{`Capacidad: ${capacidad}`}</Text>
+        <Text>{`Hora de salida: ${horaSalida}`}</Text>
+        <Text>{`Hora de llegada: ${horaLlegada}`}</Text>
+        <Text>{`Fecha de ida: ${fechaIda}`}</Text>
+        <Text>{`Nombre del conductor: ${nombreConductor}`}</Text>
 
-      <TouchableOpacity style={styles.button} onPress={() => setModalVisible(true)}>
-        <Text style={styles.buttonText}>Pagar</Text>
-      </TouchableOpacity>
+        <Picker
+          selectedValue={numSeats}
+          style={styles.picker}
+          onValueChange={(itemValue) => handleNumSeatsChange(itemValue)} // Usa la nueva función
+        >
+          {[...Array(10).keys()].map((_, index) => (
+            <Picker.Item key={index} label={`${index + 1}`} value={index + 1} />
+          ))}
+        </Picker>
 
-      {/* Modal para pago */}
-      <Modal visible={modalVisible} transparent={true} animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Pago con tarjeta</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Número de tarjeta"
-              keyboardType="numeric"
-              value={tarjeta}
-              onChangeText={setTarjeta}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Fecha de expiración (MM/AA)"
-              value={expiracion}
-              onChangeText={setExpiracion}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="CVV"
-              keyboardType="numeric"
-              secureTextEntry
-              value={cvv}
-              onChangeText={setCvv}
-            />
-            <TouchableOpacity style={styles.button} onPress={handleConfirmarPago}>
-              <Text style={styles.buttonText}>Confirmar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        <Text style={styles.title}>Selecciona tus asientos</Text>
+        {renderSeats()}
+
+        <TouchableOpacity style={styles.button} onPress={handlePago}>
+          <Text style={styles.buttonText}>Comprar</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity onPress={() => handleNavigation('Horario')}>
+          <Icon name="home" size={30} color="black" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleNavigation('Historial')}>
+          <Icon name="history" size={30} color="black" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleNavigation('Perfil')}>
+          <Icon name="person" size={30} color="black" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -117,55 +202,76 @@ const PagoScreen = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#f4f4f4',
   },
+  scrollContainer: {
+    alignItems: 'center',
+    backgroundColor: '#f4f4f4',
+    paddingVertical: 20,
+  },
+
   title: {
     fontSize: 24,
+    marginBottom: 20,
     fontWeight: 'bold',
+    marginTop: 50,  
+  },
+  picker: {
+    width: 150,
     marginBottom: 20,
   },
-  text: {
-    fontSize: 18,
-    marginBottom: 10,
+  row: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    alignItems: 'center',
   },
-  button: {
-    backgroundColor: '#007BFF',
-    padding: 15,
+  seat: {
+    width: 60,
+    height: 60,
+    backgroundColor: '#ddd',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 10,
     borderRadius: 10,
+  },
+  seatText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  selectedSeat: {
+    backgroundColor: '#5cb85c',
+  },
+  pasillo: {
+    width: 20,
+    height: 60, // Igual a la altura de los asientos
+    backgroundColor: '#fff',
+  },
+  
+
+  button: {
     marginTop: 20,
+    backgroundColor: '#007bff',
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderRadius: 10,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    width: '80%',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 20,
   },
-  input: {
-    width: '100%',
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    marginBottom: 15,
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+  },
+  occupiedSeat: {
+    backgroundColor: '#ff4d4d', // Rojo para asientos ocupados
+    opacity: 0.6, // Transparente para enfatizar el estado
   },
 });
 
-export default PagoScreen;
+export default BusSeats;

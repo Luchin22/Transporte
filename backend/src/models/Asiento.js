@@ -20,10 +20,17 @@ const Asiento = sequelize.define("Asiento", {
         allowNull: false,
     },
     estado: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: "libre",
+        type: DataTypes.STRING
     },
+    fecha_asiento: {
+        type: DataTypes.STRING,
+    },
+    hora_salida: {
+        type: DataTypes.TIME
+    },
+    hora_llegada: {
+        type: DataTypes.TIME
+    }
 }, {
     tableName: "asientos",
     timestamps: false,

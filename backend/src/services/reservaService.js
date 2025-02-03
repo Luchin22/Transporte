@@ -11,7 +11,7 @@ exports.getReservaById = async (id) => {
 };
 
 exports.createReserva = async (data) => {
-    if (!data.usuario_id || !data.fecha_reserva) {
+    if (!data.estado|| !data.fecha_reserva || !data.monto || !data.usuario_id) {
         throw new Error('Faltan campos obligatorios');
     }
     return await reservaRepository.create(data);

@@ -1,23 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, Button, Alert } from 'react-native';
+import axios from 'axios';
+import { useUser } from '../context/UserContext'; // Importa el contexto del usuario
 
 const EditarScreen = ({ navigation }) => {
-  // Estado para los campos de formulario
+  const { userData, fetchUserData } = useUser(); // Obtiene los datos del usuario desde el contexto
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
-  const [cedula, setCedula] = useState('');
   const [telefono, setTelefono] = useState('');
 
-  // Función para manejar el envío del formulario
-  const handleSubmit = () => {
-    if (!nombre || !apellido || !cedula || !telefono) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
-    } else {
-      // Aquí podrías hacer una llamada API para actualizar la información
-      console.log('Datos actualizados:', { nombre, apellido, cedula, telefono });
+  useEffect(() => {
+    if (userData) {
+      // Establece los valores iniciales del formulario con los datos del usuario
+      setNombre(userData.nombre);
+      setApellido(userData.apellido);
+      setTelefono(userData.telefono);
+    }
+  }, [userData]);
 
-      // Navegar de vuelta a la pantalla de perfil
-      navigation.navigate('Perfil');
+  const handleSubmit = async () => {
+    if (!nombre || !apellido || !telefono) {
+      Alert.alert('Error', 'Por favor completa todos los campos');
+      return;
+    }
+
+    try {
+      const response = await axios.put(
+        `http://192.168.0.139:3000/api/usuarios/usuarioSinToken/${userData?.usuario_id}`,
+        {
+          nombre,
+          apellido,
+          telefono,
+        }
+      );
+
+      Alert.alert('Éxito', 'Usuario actualizado correctamente');
+      // Actualiza los datos en el contexto para reflejar los cambios
+      fetchUserData(userData.usuario_id);
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error al actualizar los datos del usuario:', error);
+      Alert.alert('Error', 'No se pudo actualizar el usuario');
     }
   };
 
@@ -36,13 +59,6 @@ const EditarScreen = ({ navigation }) => {
         placeholder="Apellido"
         value={apellido}
         onChangeText={(text) => setApellido(text)}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Cédula"
-        keyboardType="numeric"
-        value={cedula}
-        onChangeText={(text) => setCedula(text)}
       />
       <TextInput
         style={styles.input}
@@ -74,6 +90,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
+    marginTop: 30,
   },
   input: {
     height: 50,

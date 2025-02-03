@@ -1,142 +1,150 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, Animated, ScrollView } from 'react-native';
+import { Controller, useForm } from 'react-hook-form';
+import { TextInput } from 'react-native-paper';
 import axios from 'axios';
-import { useNavigation } from '@react-navigation/native';
 
 const LoginScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const API_URL = 'http://192.168.100.8:3000/api/usuarios/sign-in';
+  const { control, handleSubmit, formState: { errors } } = useForm();
+  const [showPassword, setShowPassword] = useState(false);
+  const scale = useRef(new Animated.Value(1)).current; // Mejor uso para evitar renders innecesarios
+  const API_URL = 'http://192.168.0.139:3000/api/usuarios/sign-in';
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Por favor, ingresa el correo y la contraseña.');
-      return;
-    }
-  
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
+
+  const handleOlvidar = () => navigation.navigate('Olvidar');
+
+  const onSubmit = async (data) => {
     try {
-      const response = await axios.post(API_URL, { email, password });
-  
+      const response = await axios.post(API_URL, data);
+
       if (response.status === 200) {
-        const userData = response.data.usuario; // Asegúrate de que esta sea la estructura correcta del backend
-  
-        if (userData) {
-          const { usuario_id, rol_id } = userData;
-  
-          // Navegar a la pantalla correspondiente según el rol o ir a EditarPerfilScreen
-          if (rol_id === 5) {
-            navigation.navigate('Home');
-          } else if (rol_id === 4) {
-            navigation.navigate('Horario');
-          } else {
-            // Navegar a EditarPerfilScreen con el userId
-            navigation.navigate('EditarPerfil', { userId: usuario_id });
-          }
+        const { usuario_id, rol_id } = response.data.usuario || {};
+
+        if (rol_id === 5) {
+          navigation.navigate('Home');
+        } else if (rol_id === 4) {
+          navigation.navigate('Perfil', { userId: usuario_id });
         } else {
-          Alert.alert('Error', 'Usuario no encontrado.');
+          Alert.alert('Acceso Denegado', 'Rol no autorizado.');
         }
-      } else {
-        Alert.alert('Error', 'Credenciales incorrectas.');
       }
     } catch (error) {
       console.error('Error al conectar con el servidor:', error);
-      Alert.alert('Error', 'No se pudo conectar con el servidor.');
+      const errorMsg = error.response?.data?.message || 'No se pudo conectar con el servidor.';
+      
     }
   };
-  
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.2, duration: 200, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Image
-        source={{ uri: 'https://via.placeholder.com/150' }} // Reemplaza con la URL de tu logo
-        style={styles.logo}
-      />
-      <Text style={styles.title}>Cooperativa Chimborazo</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Correo electrónico"
-        placeholderTextColor="#888"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Contraseña"
-        placeholderTextColor="#888"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-        <Text style={styles.loginText}>Iniciar Sesión</Text>
-      </TouchableOpacity>
-      <View style={styles.footer}>
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-          <Text style={styles.footerText}>Registrar</Text>
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.container}>
+        <Image source={require('../assets/images/image.png')} style={styles.logo} />
+        <Text style={styles.title}> Cooperativa Chimborazo </Text>
+  
+        <Controller
+          control={control}
+          name="email"
+          rules={{
+            required: "El correo es obligatorio",
+            pattern: {
+              value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+              message: "Ingresa un correo válido",
+            },
+          }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              label="Correo electrónico"
+              mode="outlined"
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+              keyboardType="email-address"
+              style={styles.input}
+              outlineColor="#000000"
+            />
+          )}
+        />
+{!!errors.email && (
+  <Text style={styles.errorText}>
+    {errors.email.message?.toString() || ''}
+  </Text>
+)}
+
+       
+        <Controller
+          control={control}
+          name="password"
+          rules={{
+            required: "La contraseña es obligatoria",
+            minLength: {
+              value: 8,
+              message: "La contraseña debe tener al menos 8 caracteres",
+            },
+          }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              label="Contraseña"
+              mode="outlined"
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+              secureTextEntry={!showPassword}
+              style={styles.input}
+              outlineColor="#000000"
+              right={
+                <TextInput.Icon
+                  icon={showPassword ? "eye-off" : "eye"}
+                  onPress={togglePasswordVisibility}
+                />
+              }
+            />
+          )}
+        />
+{!!errors.password && (
+  <Text style={styles.errorText}>
+    {errors.password.message?.toString() || ''}
+  </Text>
+)}
+       
+        <TouchableOpacity style={styles.loginButton} onPress={handleSubmit(onSubmit)}>
+          <Text style={styles.loginText}>Iniciar Sesión</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => console.log('Olvidé mi contraseña')}>
-          <Text style={styles.footerText}>Olvidé mi contraseña</Text>
-        </TouchableOpacity>
+
+      
+        <View style={styles.footer}>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <Text style={styles.footerText}>Registrar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleOlvidar}>
+            <Text style={styles.footerText}>Olvidé mi contraseña</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#F9FAFC',
-  },
-  logo: {
-    width: 150,
-    height: 150,
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 30,
-    textAlign: 'center',
-  },
-  input: {
-    width: '100%',
-    height: 50,
-    borderColor: '#BDC3C7',
-    borderWidth: 1,
-    marginBottom: 15,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    color: '#2C3E50',
-  },
-  loginButton: {
-    backgroundColor: '#3498DB',
-    width: '100%',
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 10,
-    marginTop: 10,
-  },
-  loginText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 20,
-  },
-  footerText: {
-    color: '#3498DB',
-    fontSize: 16,
-    fontWeight: '500',
-  },
+  scrollContainer: { flexGrow: 1, justifyContent: 'center' },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#FFFFFF' },
+  logo: { width: 210, height: 150, elevation: 5, backgroundColor: '#FFFFFF', borderRadius: 10 },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#000000', marginBottom: 30, textAlign: 'center', marginTop: 50 },
+  input: { width: '100%', marginBottom: 15, backgroundColor: '#FFFFFF', elevation: 5, borderRadius: 5 },
+  loginButton: { backgroundColor: '#000000', width: '100%', paddingVertical: 12, alignItems: 'center', borderRadius: 5, marginTop: 10, elevation: 5 },
+  loginText: { color: '#FFFFFF', fontSize: 18, fontWeight: '600' },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 20 },
+  footerText: { color: '#000000', fontSize: 16, fontWeight: '500', textDecorationLine: 'underline' },
+  errorText: { color: '#FF0000', fontSize: 14, marginBottom: 10 },
 });
 
 export default LoginScreen;

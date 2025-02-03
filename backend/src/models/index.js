@@ -31,9 +31,13 @@ HistorialReserva.belongsTo(Reserva, { foreignKey: 'id_reserva' });
 Reserva.hasOne(Pago, { foreignKey: 'id_reserva' });
 Pago.belongsTo(Reserva, { foreignKey: 'id_reserva' });
 
-// Relación Bus - Asiento
-Bus.hasMany(Asiento, { foreignKey: 'id_bus' });
-Asiento.belongsTo(Bus, { foreignKey: 'id_bus' });
+// Relación asiento -Bus
+// Relaciones
+Bus.hasMany(Asiento, { foreignKey: "id_bus" });
+Asiento.belongsTo(Bus, { foreignKey: "id_bus" });
+
+
+
 
 // Relación Ruta - Horario
 Ruta.hasMany(Horario, { foreignKey: 'id_ruta' });
@@ -51,9 +55,27 @@ Conductor.belongsTo(Bus, { foreignKey: 'id_bus' });
 Bus.hasMany(Ruta, { foreignKey: 'id_bus' });
 Ruta.belongsTo(Bus, { foreignKey: 'id_bus' });
 
+Pago.hasMany(HistorialReserva, { foreignKey: "id_pago" });
+HistorialReserva.belongsTo(Pago, { foreignKey: "id_pago" });
+
+
+Usuario.hasMany(Pago, { foreignKey: "usuario_id" });
+Pago.belongsTo(Usuario, { foreignKey: "usuario_id" });
+
+
+Asiento.hasMany(Pago, { foreignKey: "id_asiento" });
+Pago.belongsTo(Asiento, { foreignKey: "id_asiento" });
+
 // Relación Conductor - Usuario
 Conductor.belongsTo(Usuario, { foreignKey: 'usuario_id' });
 Usuario.hasOne(Conductor, { foreignKey: 'usuario_id' });
+
+Bus.hasMany(Horario, { foreignKey: "id_bus" });
+Horario.belongsTo(Bus, { foreignKey: "id_bus" });
+
+
+Bus.hasMany(Pago, { foreignKey: "id_bus" });
+Pago.belongsTo(Bus, { foreignKey: "id_bus" });
 
 module.exports = {
   Usuario,

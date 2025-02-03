@@ -1,66 +1,147 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-import * as FileSystem from 'expo-file-system';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, Dimensions } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert } from 'react-native';
+import * as Print from 'expo-print';
+import { useUser } from '../context/UserContext';  // Asegúrate de importar el hook
 import { shareAsync } from 'expo-sharing';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import axios from 'axios';
 
-const PagoScreen = ({ route }) => {
-  const { numTickets = 0, selectedSeats = [], salida = 'Ciudad A', destino = 'Ciudad B', fecha = '2024-12-25', nombre = 'Juan Pérez' } = route.params || {};
+
+
+const PagoScreen = ({ route, navigation }) => {
+  const { numTickets = 0, selectedSeats = [], origen = '', destino = '', salida = '', llegada = '', nombre = '', idAsiento, nombreC = '', numeroBus = '', idBus = '', fechaIda = ''} = route.params || {};
+  const { userData } = useUser(); // Datos del usuario desde el contexto
+
+  const usuarioId = userData ? userData.usuario_id : null;
+
+ 
+
 
   const [modalVisible, setModalVisible] = useState(false);
   const [tarjeta, setTarjeta] = useState('');
   const [expiracion, setExpiracion] = useState('');
   const [cvv, setCvv] = useState('');
+  const [fechaReserva, setFechaReserva] = useState(new Date().toISOString().split('T')[0]);
+  const [precioUnitario, setPrecioUnitario] = useState(0); // Precio por boleto
+  const [total, setTotal] = useState(0); // Total calculado
+  const [estado, setEstado] = useState('Pendiente');
+ 
 
-  // Función para generar el PDF
-  const generatePDF = async () => {
-    try {
-      const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage([595.28, 841.89]); // Tamaño A4
 
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const { width, height } = page.getSize();
+  const menuOptions = [
+    { id: 1, name: 'Editar', screen: 'Editar', icon: 'edit' },
+    { id: 2, name: 'Historial', screen: 'Historial', icon: 'history' },
+    { id: 3, name: 'Payment', screen: 'Payment', icon: 'payment' },
+    { id: 4, name: 'Salir', screen: 'Login', icon: 'logout' },
+  ];
 
-      page.drawText('Confirmación de Compra', { x: 50, y: height - 50, size: 20, font });
-      page.drawText(`Nombre: ${nombre}`, { x: 50, y: height - 100, size: 12, font });
-      page.drawText(`Fecha: ${fecha}`, { x: 50, y: height - 120, size: 12, font });
-      page.drawText(`Salida: ${salida}`, { x: 50, y: height - 140, size: 12, font });
-      page.drawText(`Destino: ${destino}`, { x: 50, y: height - 160, size: 12, font });
-      page.drawText(`Número de boletos: ${numTickets}`, { x: 50, y: height - 180, size: 12, font });
-      page.drawText(`Asientos: ${selectedSeats.join(', ')}`, { x: 50, y: height - 200, size: 12, font });
-      page.drawText(`Número del Bus: 1234`, { x: 50, y: height - 220, size: 12, font });
-      page.drawText(`Código de barras: 987654321`, { x: 50, y: height - 240, size: 12, font });
-
-      // Guardar el PDF como un Uint8Array
-      const pdfBytes = await pdfDoc.save();
-
-      // Codificar a Base64
-      const base64PDF = pdfBytes.toString('base64');
-
-      // Ruta del archivo
-      const filePath = `${FileSystem.documentDirectory}boleto.pdf`;
-
-      // Usar writeAsStringAsync para guardar el archivo en base64
-      await FileSystem.writeAsStringAsync(filePath, base64PDF, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      // Compartir el archivo PDF
-      await shareAsync(filePath);
-    } catch (error) {
-      console.error("Error al generar o compartir el PDF: ", error);
-    }
+  const handleNavigation = (screen) => {
+    navigation.navigate(screen, { usuario_id: userData?.usuario_id });
   };
 
-  // Confirmación del pago
+  const getCurrentDate = () => {
+    const now = new Date();
+    return now.toLocaleDateString();
+  };
+
+  const [fecha, setFecha] = useState(getCurrentDate());
+  useEffect(() => {
+    // Simula la llamada a la API para obtener el precio unitario según el origen y destino
+    const fetchPrecio = async () => {
+      try {
+        const response = await axios.get('http://192.168.0.139:3000/api/rutas/rutas-con-capacidad');
+        const ruta = response.data.find(
+          (r) => r.origen === origen && r.destino === destino
+        );
+        if (ruta) {
+          setPrecioUnitario(parseFloat(ruta.monto)); // Establecer el precio unitario
+          setTotal(numTickets * parseFloat(ruta.monto)); // Calcular el total
+        } else {
+          Alert.alert('Error', 'No se encontró la ruta seleccionada.');
+        }
+      } catch (error) {
+        console.error('Error al obtener los datos de la ruta:', error);
+        Alert.alert('Error', 'Hubo un problema al obtener los datos de la ruta.');
+      }
+    };
+
+    fetchPrecio();
+  }, [origen, destino, numTickets]);
+
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFecha(getCurrentDate());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const enviarPago = async () => {
+    if (!usuarioId) {
+      Alert.alert('Error', 'No se encontró el ID del usuario');
+      return;
+    }
+  
+    try {
+      const seatsData = {
+        numero: selectedSeats.join(','),
+        id_bus: idBus,
+        estado: 'ocupado',
+        fecha_asiento: fechaIda,
+        hora_salida: salida,
+        hora_llegada: llegada,
+      };
+  
+      // Crear asiento y obtener el id_asiento
+      const seatResponse = await axios.post('http://192.168.0.139:3000/api/asientos', seatsData);
+      const idAsientoCreado = seatResponse.data.id_asiento;
+  
+      if (!idAsientoCreado) {
+        throw new Error('No se devolvió un ID de asiento válido.');
+      }
+  
+      console.log('Asiento creado con ID:', idAsientoCreado);
+  
+      // Realizar el pago
+      const data = {
+        monto: total,
+        fecha_pago: fechaReserva,
+        metodo_pago: 'Tarjeta',
+        estado_pago: 'Completo',
+        usuario_id: usuarioId,
+        id_asiento: idAsientoCreado,
+        id_bus: idBus,
+      };
+  
+      const responsePago = await axios.post('http://192.168.0.139:3000/api/pagos', data);
+      console.log('Pago enviado correctamente:', responsePago.data);
+  
+      const dataHistorial = {
+        id_pago: responsePago.data.id_pago,
+        estado: 'Completo',
+        categoria: 'Pago',
+        usuario_id: usuarioId,
+      };
+  
+      const responseHistorial = await axios.post('http://192.168.0.139:3000/api/historial-reservas', dataHistorial);
+      console.log('Historial de reserva creado correctamente:', responseHistorial.data);
+  
+      Alert.alert('Éxito', 'Pago realizado y historial registrado con éxito.');
+      navigation.navigate('Historial', {
+        origen,
+        pasajeros: numTickets,
+        usuario_id: userData?.usuario_id,
+      });
+    } catch (error) {
+      console.error('Error al enviar el pago o crear el historial:', error.response ? error.response.data : error.message);
+      Alert.alert('Error', `Hubo un problema al procesar el pago o al registrar el historial: ${error.response ? error.response.data.message : error.message}`);
+    }
+  };
+  
+
   const handleConfirmarPago = () => {
     if (!tarjeta || !expiracion || !cvv) {
       Alert.alert('Error', 'Por favor, completa todos los campos de la tarjeta.');
@@ -68,56 +149,229 @@ const PagoScreen = ({ route }) => {
     }
 
     setModalVisible(false);
-    Alert.alert('Éxito', 'Pago realizado con éxito.');
-    generatePDF();
+
+    enviarPago();
+
+    printToFile('Confirmación de Compra');
+  };
+  const printToFile = async (tipo = 'Confirmación de Compra') => {
+    const html = `
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+        </head>
+        <body style="text-align: center;">
+          <h1 style="font-size: 50px; font-family: Helvetica Neue; font-weight: normal;">
+            ${tipo}
+          </h1>
+          <p style="font-size: 24px; font-family: Helvetica Neue; font-weight: normal;">
+            Nombre: ${userData?.nombre} ${userData?.apellido}
+          </p>
+          <p style="font-size: 24px; font-family: Helvetica Neue; font-weight: normal;">
+            Correo: ${nombreC}
+          </p>
+          <p style="font-size: 24px; font-family: Helvetica Neue; font-weight: normal;">
+            Numero Bus : ${numeroBus}
+          </p>  
+          <p style="font-size: 24px; font-family: Helvetica Neue; font-weight: normal;">
+            Fecha: ${fecha}
+          </p>
+          <p style="font-size: 24px; font-family: Helvetica Neue; font-weight: normal;">
+            Salida: ${origen} - Destino: ${destino}
+          </p>
+          <p style="font-size: 24px; font-family: Helvetica Neue; font-weight: normal;">
+            Boletos: ${numTickets} - Asientos: ${selectedSeats.join(', ')}
+          </p>
+           
+        </body>
+      </html>
+    `;
+
+    try {
+      const { uri } = await Print.printToFileAsync({ html });
+      console.log('Archivo generado en:', uri);
+
+      await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+      Alert.alert('Éxito', `El PDF de ${tipo} ha sido generado y compartido.`);
+    } catch (error) {
+      console.error(`Error al generar o compartir el PDF de ${tipo}: `, error);
+      Alert.alert('Error', `Hubo un error al generar o compartir el PDF de ${tipo}.`);
+    }
   };
 
+  const handleReservar = async () => {
+    try {
+      const datas = {
+        estado,
+        fecha_reserva: fechaReserva,
+        monto: total,
+        usuario_id: usuarioId,
+      };
+  
+      const reservaResponse = await axios.post('http://192.168.0.139:3000/api/reservas', datas);
+      console.log('Reserva enviada correctamente:', reservaResponse.data);
+  
+      const historialData = {
+        id_reserva: reservaResponse.data.id_reserva,
+        estado,
+        categoria: 'Reserva',
+        usuario_id: usuarioId,
+      }; 
+  
+      const historialResponse = await axios.post('http://192.168.0.139:3000/api/historial-reservas/reserva', historialData);
+      console.log('Historial de reserva creado correctamente:', historialResponse.data);
+      
+      const seatsData = {
+        numero: selectedSeats.join(','),
+        id_bus: idBus,
+        estado: 'ocupado',
+        fecha_asiento: fechaIda,
+        hora_salida: salida,
+        hora_llegada: llegada,
+      };
+      const response = await axios.post('http://192.168.0.139:3000/api/asientos', seatsData);
+      console.log('Asientos ocupados correctamente:', response.data);
+
+  
+      Alert.alert('Éxito', 'Reserva y historial registrados correctamente.');
+
+      // Generar el PDF después de la reserva
+      await printToFile('Confirmación de Reserva'); // Llamar a la función para generar el PDF
+  
+      navigation.navigate('Historial', {
+        nombre,
+        origen,
+        pasajeros: numTickets,
+      });
+    } catch (error) {
+      console.error('Error al procesar la reserva o el historial:', error);
+      Alert.alert('Error', 'Hubo un problema al procesar la reserva o el historial.');
+    }
+  };
+  
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.userInfo}>
+        {userData?.nombre} {userData?.apellido}
+        </Text>
+        {userData?.usuario_id && (
+              <Text style={styles.userInfo}>ID: {userData?.usuario_id}</Text>
+              )}
+         </View>
+      <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.title}>Pago</Text>
-      <Text style={styles.text}>Nombre: {nombre}</Text>
-      <Text style={styles.text}>Fecha: {fecha}</Text>
-      <Text style={styles.text}>Salida: {salida}</Text>
+      <Text style={styles.text}>Nombre: {userData?.nombre} {userData?.apellido}</Text>
+      <Text style={styles.text}>Nombre Conductor: {nombreC}</Text>
+      <Text style={styles.text}>Numero Bus: {idBus}</Text>
+      <Text style={styles.text}>Fecha: {fechaIda}</Text>
+      <Text style={styles.text}>Origen: {origen}</Text>
       <Text style={styles.text}>Destino: {destino}</Text>
-      <Text style={styles.text}>Total de boletos seleccionados: {numTickets}</Text>
-      <Text style={styles.text}>Asientos seleccionados: {selectedSeats.join(', ')}</Text>
+      <Text style={styles.text}>Hora de salida: {salida}</Text>
+     <Text style={styles.text}>Hora de llegada: {llegada}</Text>
+     <Text style={styles.text}>ID de Asiento(s): {selectedSeats.join(', ')}</Text> {/* Agregado */}
+     <Text style={styles.text}>Total de boletos seleccionados: {numTickets}</Text>
+     <Text style={styles.text}>Asientos seleccionados: {selectedSeats.join(', ')}</Text>
+     
+       {/* Mostrar el total dinámicamente */}
+       <Text style={styles.text}>Total: ${total.toFixed(2)}</Text>
 
-      <TouchableOpacity style={styles.button} onPress={() => setModalVisible(true)}>
-        <Text style={styles.buttonText}>Pagar</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => setModalVisible(true)}>
+          <Text style={styles.buttonText}>Pagar</Text>
+        </TouchableOpacity>
 
-      {/* Modal para pago */}
-      <Modal visible={modalVisible} transparent={true} animationType="slide">
+        <View style={styles.separator} />
+
+        <Text style={styles.subtitle}>Reservar</Text>
+        <Text style={styles.title}>Detalles de la reserva</Text>
+        <Text style={styles.text}>Nombre: {userData?.nombre} {userData?.apellido}</Text>
+        <Text style={styles.text}>Fecha: {fechaIda}</Text>
+        <Text style={styles.text}>Salida: {origen}</Text>
+        <Text style={styles.text}>Destino: {destino}</Text>
+        <Text style={styles.text}>Hora de salida: {salida}</Text>
+        <Text style={styles.text}>Hora de llegada: {llegada}</Text>
+        <Text style={styles.text}>Total de boletos seleccionados: {numTickets}</Text>
+        <Text style={styles.text}>Asientos seleccionados: {selectedSeats.join(', ')}</Text>
+        <Text style={styles.totalText}>Total: ${total}</Text>
+            
+        <Text style={styles.text}>Estado:</Text>
+        <Picker
+          selectedValue={estado}
+          style={styles.picker}
+          onValueChange={(itemValue) => setEstado(itemValue)}
+        >
+          <Picker.Item label="Pendiente" value="Pendiente" />
+          <Picker.Item label="Confirmada" value="Confirmada" />
+          <Picker.Item label="Cancelada" value="Cancelada" />
+        </Picker>
+
+        <TouchableOpacity style={styles.button} onPress={handleReservar}>
+          <Text style={styles.buttonText}>Reservar</Text>
+        </TouchableOpacity>
+      </ScrollView>
+      
+
+      {/* Modal para información de tarjeta */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Pago con tarjeta</Text>
+            <Text style={styles.modalTitle}>Información de la Tarjeta</Text>
             <TextInput
               style={styles.input}
-              placeholder="Número de tarjeta"
+              placeholder="Número de Tarjeta"
               keyboardType="numeric"
               value={tarjeta}
-              onChangeText={setTarjeta}
+              onChangeText={(text) => setTarjeta(text)}
             />
             <TextInput
               style={styles.input}
-              placeholder="Fecha de expiración (MM/AA)"
+              placeholder="Fecha de Expiración (MM/AA)"
               value={expiracion}
-              onChangeText={setExpiracion}
+              onChangeText={(text) => setExpiracion(text)}
             />
             <TextInput
               style={styles.input}
               placeholder="CVV"
               keyboardType="numeric"
-              secureTextEntry
+              secureTextEntry={true}
               value={cvv}
-              onChangeText={setCvv}
+              onChangeText={(text) => setCvv(text)}
             />
-            <TouchableOpacity style={styles.button} onPress={handleConfirmarPago}>
-              <Text style={styles.buttonText}>Confirmar</Text>
-            </TouchableOpacity>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.confirmButton]}
+                onPress={handleConfirmarPago}
+              >
+                <Text style={styles.buttonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
+      {/* Footer */}
+        <View style={styles.footer}>
+          <TouchableOpacity onPress={() => handleNavigation('Horario')}>
+            <Icon name="home" size={30} color="black" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleNavigation('Historial')}>
+            <Icon name="history" size={30} color="black" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleNavigation('Perfil')}>
+            <Icon name="person" size={30} color="black" />
+          </TouchableOpacity>
+        </View>
+        
     </View>
   );
 };
@@ -125,28 +379,67 @@ const PagoScreen = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f4f4f4',
+    backgroundColor: '#f5f5f5',
+  }, totalText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginVertical: 10,
+    marginTop: 20,
+  },
+  mapContainer: {
+    height: 300,
+    marginTop: 20,
+  },
+  map: {
+    width: '100%',
+    height: '100%',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 10,
+    backgroundColor: '#f5f5f5',
+    marginTop: 20,
+  },
+  userInfo: {
+    fontSize: 18,
+    color: '#000000',
+    marginTop: 10,
+  },
+  content: {
+    padding: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  text: {
-    fontSize: 18,
     marginBottom: 10,
   },
-  button: {
-    backgroundColor: '#007BFF',
-    padding: 15,
-    borderRadius: 10,
+  subtitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
     marginTop: 20,
+    marginBottom: 10,
+  },
+  text: {
+    fontSize: 16,
+    marginBottom: 5,
+  },
+  button: {
+    backgroundColor: '#2196F3',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#ddd',
+    marginVertical: 20,
   },
   modalContainer: {
     flex: 1,
@@ -164,16 +457,45 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 15,
   },
   input: {
     width: '100%',
-    padding: 10,
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 5,
     marginBottom: 15,
+    padding: 8,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  cancelButton: {
+    backgroundColor: '#f44336',
+    flex: 1,
+    marginRight: 5,
+  },
+  confirmButton: {
+    backgroundColor: '#4CAF50',
+    flex: 1,
+    marginLeft: 5,
+  },
+  picker: {
+    height: 50,
+    width: '100%',
+    marginVertical: 10,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    width: '100%',
   },
 });
 
 export default PagoScreen;
+

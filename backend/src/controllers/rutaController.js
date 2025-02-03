@@ -8,6 +8,16 @@ exports.getAllRutas = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+exports.getRutasWithBusCapacityHandler = async (req, res) => {
+    try {
+        const rutas = await rutaService.getRutasWithBusCapacity();
+        res.status(200).json(rutas); // Devuelve las rutas al frontend
+    } catch (error) {
+        console.error('Error al obtener las rutas con capacidad:', error);
+        res.status(500).json({ error: 'Error al obtener las rutas con capacidad' });
+    }
+};
+
 
 exports.getRutaById = async (req, res) => {
     try {

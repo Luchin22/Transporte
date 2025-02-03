@@ -39,6 +39,8 @@ const Reserva = sequelize.define("Reserva", {
         type: DataTypes.STRING,
         defaultValue: "confirmada",
     },
+    monto: {
+        type: DataTypes.DECIMAL(10, 2),}
 }, {
     tableName: "reservas",
     timestamps: false,

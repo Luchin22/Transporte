@@ -11,12 +11,12 @@ exports.getAsientoById = async (id) => {
 };
 
 exports.createAsiento = async (data) => {
-    if (!data.numero || !data.estado ) {
+    if (!data.numero || !data.id_bus || !data.estado || !data.fecha_asiento || !data.hora_salida || !data.hora_llegada) {
         throw new Error('Faltan campos obligatorios');
     }
     return await asientoRepository.create(data);
 };
-
+ 
 exports.updateAsiento = async (id, data) => {
     const result = await asientoRepository.update(id, data);
     if (result[0] === 0) throw new Error('Asiento no encontrado');

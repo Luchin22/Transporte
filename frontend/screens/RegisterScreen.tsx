@@ -6,7 +6,7 @@ import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
 
 const RegisterScreen = ({ navigation }) => {
-  const API_URL = "http://192.168.100.8:3000"; // Asegúrate de actualizar esta URL si es necesario
+  const API_URL = "http://192.168.0.139:3000"; // Asegúrate de actualizar esta URL si es necesario
   const [roles] = useState([
     { id: 4, label: "Usuario" },
     { id: 5, label: "Admin" },
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: "#78288c",
+    borderColor: "#000000",
     borderRadius: 4,
     marginBottom: 10,
   },

@@ -24,6 +24,8 @@ router.post('/nuevoUsuario', usuarioController.createUsuario);
 router.delete('/usuario/:id', authMiddleware, roleMiddleware(['eliminar_usuario']), usuarioController.deleteUsuario);
 router.get('/listarUsuarios', usuarioController.getAllUsuarios);
 router.put('/usuario/:id', usuarioController.updateUsuario);
+router.put('/usuarioSinToken/:id', usuarioController.updateUsuarioSinToken);
+
 
 // Todos los usuarios autenticados pueden ver su propia información
 router.get('/usuario/:id', usuarioController.getUsuarioById);

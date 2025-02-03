@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const sequelize = require("./config/config");
 const routes = require("./routes");
+const cron = require("./jobs/scheduler"); // Asegúrate de que este archivo existe
 
 
 
@@ -15,7 +16,7 @@ app.use(express.json());
 // Configuración de CORS
 app.use(cors({
     origin: "http://localhost:8081",  // Cambia a la URL de tu frontend
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
 

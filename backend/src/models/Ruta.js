@@ -23,6 +23,9 @@ const Ruta = sequelize.define("Ruta", {
         type: DataTypes.STRING,
         defaultValue: "activa",
     },
+    monto: {
+        type: DataTypes.DECIMAL(10, 2),
+    }
 }, {
     tableName: "rutas",
     timestamps: false,

@@ -5,29 +5,41 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  Modal,
+  TouchableOpacity,
 } from "react-native";
-import { TextInput, Button } from "react-native-paper";
+import { TextInput, Button, HelperText } from "react-native-paper";
 import { useForm, Controller } from "react-hook-form";
+import RNPickerSelect from "react-native-picker-select";
 import axios from "axios";
 
 const BusScreen = () => {
-  const API_URL = "http://192.168.100.8:3000/api/buses";
+  const API_URL = "http://192.168.0.139:3000/api/buses";
+  const CONDUCTORES_API = "http://192.168.0.139:3000/api/conductores";
 
-  const { control, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm({
     defaultValues: {
       placa: "",
       marca: "",
       modelo: "",
-      capacidad: "",
+      capacidad_inicial: "",
       estado: "",
+      numero: "",
+      id_conductor: "",
     },
   });
 
   const [buses, setBuses] = useState([]);
-  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [conductores, setConductores] = useState([]);
   const [selectedBusId, setSelectedBusId] = useState(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
 
-  // Fetch buses on load
   useEffect(() => {
     const fetchBuses = async () => {
       try {
@@ -38,68 +50,113 @@ const BusScreen = () => {
       }
     };
 
-    fetchBuses();
-  }, []);
+    const fetchConductores = async () => {
+      try {
+        const response = await axios.get(CONDUCTORES_API);
+        setConductores(response.data);
+      } catch (error) {
+        console.error("Error fetching conductores:", error);
+      }
+    };
 
-  // Add or edit bus
+    fetchBuses();
+    fetchConductores();
+  }, []);
   const onSubmit = async (data) => {
     try {
-      if (selectedBusId) {
-        // Editing bus
-        await axios.put(`${API_URL}/${selectedBusId}`, data);
-        setBuses((prev) =>
-          prev.map((bus) =>
-            bus.id === selectedBusId ? { ...bus, ...data } : bus
-          )
-        );
-        Alert.alert("Éxito", "Bus actualizado correctamente.");
-      } else {
-        // Adding new bus
-        const response = await axios.post(API_URL, data);
-        setBuses((prev) => [...prev, response.data]);
-        Alert.alert("Éxito", "Bus registrado correctamente.");
-      }
+      data.capacidad = data.capacidad_inicial;
+      const response = await axios.post(API_URL, data);
+      setBuses((prev) => [...prev, response.data]);
+      Alert.alert("Éxito", "Bus registrado correctamente.");
       reset();
-      setEditModalVisible(false);
     } catch (error) {
-      console.error("Error registrando o actualizando bus:", error);
-      Alert.alert("Error", "No se pudo guardar los cambios.");
+      if (axios.isAxiosError(error) && error.response) {
+        // Verifica si hay un mensaje de error en la respuesta del backend
+        const errorMessage = error.response.data.message || "No se pudo registrar el bus.";
+        Alert.alert("Error", errorMessage);
+      } else {
+        // Para otros errores (como problemas de red)
+        Alert.alert("Error", "Hubo un problema con la conexión al servidor.");
+      }
     }
   };
+  
+  
+  
 
-  // Open edit modal
+  const onUpdateBus = async (data) => {
+    console.log("selectedBusId:", selectedBusId); // Verifica el ID del bus antes de la solicitud
+  
+    if (!selectedBusId) {
+      console.log("No se ha seleccionado un bus.");
+      return; // No realizar la actualización si no hay un bus seleccionado
+    }
+  
+    try {
+      data.capacidad = data.capacidad_inicial;
+      const response = await axios.patch(
+        `http://192.168.0.139:3000/api/buses/${selectedBusId}/update-dato`,
+        data
+      );
+      console.log("Bus actualizado:", response.data);
+      // Actualiza el estado aquí si es necesario
+      setBuses((prev) =>
+        prev.map((bus) =>
+          bus.id === selectedBusId ? { ...bus, ...data } : bus
+        )
+      );
+      Alert.alert("Éxito", "Bus actualizado correctamente.");
+    } catch (error) {
+      console.error("Error actualizando bus:", error);
+      Alert.alert("Error", "No se pudo actualizar el bus.");
+    }
+  };
+  
+  
+
   const openEditModal = (bus) => {
-    setSelectedBusId(bus.id);
+    console.log("Bus seleccionado:", bus); // Verifica el bus aquí
+    setSelectedBusId(bus.id_bus); // Esto debe asignar el ID del bus
     setValue("placa", bus.placa);
     setValue("marca", bus.marca);
     setValue("modelo", bus.modelo);
-    setValue("capacidad", bus.capacidad);
+    setValue("capacidad_inicial", bus.capacidad_inicial);
     setValue("estado", bus.estado);
+    setValue("numero", bus.numero);
+    setValue("id_conductor", bus.id_conductor);
     setEditModalVisible(true);
   };
+  
 
-  // Delete bus
-  const deleteBus = async (id) => {
+
+
+  const closeEditModal = () => {
+    setEditModalVisible(false);
+    reset();
+  };
+
+  const deleteBus = async (id_bus) => {
     try {
-      await axios.delete(`${API_URL}/${id}`);
-      setBuses((prev) => prev.filter((bus) => bus.id !== id));
+      await axios.delete(`${API_URL}/${id_bus}`);
+      setBuses((prev) => prev.filter((bus) => bus.id_bus !== id_bus));
       Alert.alert("Éxito", "Bus eliminado correctamente.");
     } catch (error) {
       console.error("Error eliminando bus:", error);
       Alert.alert("Error", "No se pudo eliminar el bus.");
     }
   };
+  
 
   return (
     <ScrollView style={styles.container}>
-      {/* Registrar Bus */}
+      {/* Formulario de registro */}
       <View style={styles.formContainer}>
         <Text style={styles.title}>
           {selectedBusId ? "Editar Bus" : "Registrar Bus"}
         </Text>
 
-        {/* Placa */}
-        <Controller
+         {/* Placa */}
+         <Controller
           control={control}
           name="placa"
           rules={{ required: "La placa es obligatoria" }}
@@ -158,7 +215,7 @@ const BusScreen = () => {
         {/* Capacidad */}
         <Controller
           control={control}
-          name="capacidad"
+          name="capacidad_inicial"
           rules={{ required: "La capacidad es obligatoria", pattern: { value: /^\d+$/, message: "Capacidad inválida" } }}
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
@@ -169,11 +226,11 @@ const BusScreen = () => {
               value={value}
               keyboardType="number-pad"
               style={styles.input}
-              outlineColor={errors.capacidad ? "red" : "#78288c"}
+              outlineColor={errors.capacidad_inicial ? "red" : "#78288c"}
             />
           )}
         />
-        {errors.capacidad && <Text style={styles.errorText}>{errors.capacidad.message}</Text>}
+        {errors.capacidad_inicial && <Text style={styles.errorText}>{errors.capacidad_inicial.message}</Text>}
 
         {/* Estado */}
         <Controller
@@ -194,13 +251,56 @@ const BusScreen = () => {
         />
         {errors.estado && <Text style={styles.errorText}>{errors.estado.message}</Text>}
 
+        {/* Numero */}
+        <Controller
+          control={control}
+          name="numero"
+          rules={{ required: "El número es obligatorio", pattern: { value: /^\d+$/, message: "Número inválido" } }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              label="Número"
+              mode="outlined"
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+              keyboardType="number-pad"
+              style={styles.input}
+              outlineColor={errors.numero ? "red" : "#78288c"}
+            />
+          )}
+        />
+        {errors.numero && <Text style={styles.errorText}>{errors.numero.message}</Text>}
+
+        {/* Conductor */}
+        <Controller
+          control={control}
+          name="id_conductor"
+          rules={{ required: "Debe seleccionar un conductor" }}
+          render={({ field: { onChange, value } }) => (
+            <View style={styles.dropdown}>
+              <Text style={styles.dropdownLabel}>Conductor:</Text>
+              <RNPickerSelect
+                onValueChange={(value) => onChange(value)}
+                items={conductores.map((conductor) => ({
+                  label: conductor.nombre_conductor,
+                  value: conductor.id_conductor,
+                }))}
+                placeholder={{ label: 'Seleccione un conductor', value: '' }}
+                style={styles.pickerSelectStyles}
+                value={value}
+              />
+              {errors.id_conductor && <HelperText type="error">{errors.id_conductor.message}</HelperText>}
+            </View>
+          )}
+        />
+
         <Button
           mode="contained"
           onPress={handleSubmit(onSubmit)}
           loading={isSubmitting}
           style={styles.button}
         >
-          {selectedBusId ? "Actualizar" : "Guardar"}
+          Guardar
         </Button>
       </View>
 
@@ -225,16 +325,140 @@ const BusScreen = () => {
               </Button>
               <Button
                 mode="outlined"
-                onPress={() => deleteBus(bus.id)}
-                style={styles.deleteButton}
-                color="red"
-              >
-                Eliminar
-              </Button>
+              onPress={() => deleteBus(bus.id_bus)} // Usar id_bus en lugar de id
+                 style={styles.deleteButton}
+                    color="red"
+                        >
+                        Eliminar
+                </Button>
+
             </View>
           </View>
         ))}
       </View>
+
+      {/* Modal de Edición */}
+      <Modal visible={editModalVisible} animationType="slide" transparent>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.title}>Editar Bus</Text>
+
+         
+
+             {/* Placa */}
+             <Controller
+              control={control}
+              name="placa"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  label="Placa"
+                  mode="outlined"
+                  onChangeText={onChange}
+                  value={value}
+                  style={styles.input}
+                />
+              )}
+            />
+
+            {/* Marca */}
+            <Controller
+              control={control}
+              name="marca"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  label="Marca"
+                  mode="outlined"
+                  onChangeText={onChange}
+                  value={value}
+                  style={styles.input}
+                />
+              )}
+            />
+
+            {/* Modelo */}
+            <Controller
+              control={control}
+              name="modelo"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  label="Modelo"
+                  mode="outlined"
+                  onChangeText={onChange}
+                  value={value}
+                  style={styles.input}
+                />
+              )}
+            />
+
+            {/* Capacidad */}
+            <Controller
+              control={control}
+              name="capacidad_inicial"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  label="Capacidad"
+                  mode="outlined"
+                  onChangeText={onChange}
+                  value={value}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              )}
+            />
+
+            {/* Estado */}
+            <Controller
+              control={control}
+              name="estado"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  label="Estado"
+                  mode="outlined"
+                  onChangeText={onChange}
+                  value={value}
+                  style={styles.input}
+                />
+              )}
+            />
+
+            {/* Número */}
+            <Controller
+              control={control}
+              name="numero"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  label="Número"
+                  mode="outlined"
+                  onChangeText={onChange}
+                  value={value}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              )}
+            />
+
+<Button
+  mode="contained"
+  onPress={handleSubmit(onUpdateBus)}
+  loading={isSubmitting}
+  style={styles.button}
+  disabled={!selectedBusId} // Deshabilita el botón si no se ha seleccionado un bus
+>
+  Actualizar
+</Button>
+
+
+
+            <Button
+              mode="text"
+              onPress={closeEditModal}
+              style={styles.button}
+            >
+              Cancelar
+            </Button>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -243,14 +467,82 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#f5f5f5" },
   formContainer: { marginBottom: 20, padding: 15, backgroundColor: "#fff" },
   title: { fontSize: 18, fontWeight: "bold", marginBottom: 15 },
-  input: { marginBottom: 10 },
-  button: { marginTop: 10 },
+  input: { marginBottom: 10, backgroundColor: "#fff" },
+  button: { marginTop: 10, backgroundColor: "#000000" },
   listContainer: { padding: 15, backgroundColor: "#fff" },
   listItem: { marginBottom: 10, padding: 10 },
   buttonContainer: { flexDirection: "row", justifyContent: "space-between" },
   editButton: { marginRight: 5 },
+  dropdown: { marginBottom: 10 },
+  dropdownLabel: { fontSize: 14, marginBottom: 5 },
+  dropdownContent: {
+    paddingVertical: 10,
+  },
   deleteButton: { marginLeft: 5 },
+  dropdownMenu: {
+    maxHeight: 150,
+    borderWidth: 1,
+    borderColor: "#78288c",
+    backgroundColor: "#fff",
+    borderRadius: 5,
+    position: "absolute",
+    top: 50,
+    width: "100%",
+    zIndex: 10,
+  },
+  dropdownItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderColor: "#ddd",
+    backgroundColor: "#f5f5f5",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    color: "#333",
+  },
   errorText: { color: "red", fontSize: 12 },
+  pickerSelectStyles: {
+    inputIOS: {
+      fontSize: 16,
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderWidth: 1,
+      borderRadius: 4,
+      borderColor: "#78288c",
+      backgroundColor: "#fff",
+    },
+    inputAndroid: {
+      fontSize: 16,
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderWidth: 1,
+      borderRadius: 4,
+      borderColor: "#78288c",
+      backgroundColor: "#fff",
+    },
+    
+  },  
+
 });
+
 
 export default BusScreen;

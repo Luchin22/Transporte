@@ -11,7 +11,7 @@ exports.getPagoById = async (id) => {
 };
 
 exports.createPago = async (data) => {
-    if (!data.id_reserva || !data.monto || !data.metodo_pago) {
+    if (!data.monto || !data.fecha_pago || !data.metodo_pago || !data.estado_pago || !data.usuario_id || !data.id_asiento || !data.id_bus) {
         throw new Error('Faltan campos obligatorios');
     }
     return await pagoRepository.create(data);

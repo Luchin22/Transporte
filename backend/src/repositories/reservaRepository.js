@@ -1,11 +1,11 @@
-const { Pago } = require('../models');
+const { Pago, Reserva } = require('../models');
 
-const pagoRepository = {
-    findAll: async () => await Pago.findAll(),
-    findById: async (id) => await Pago.findByPk(id),
-    create: async (data) => await Pago.create(data),
-    update: async (id, data) => await Pago.update(data, { where: {id_reserva: id } }),
-    delete: async (id) => await Pago.destroy({ where: {id_reserva: id } }),
+const ReservaRepository = {
+    findAll: async () => await Reserva.findAll(),
+    findById: async (id) => await Reserva.findByPk(id),
+    create: async (data) => await Reserva.create(data),
+    update: async (id, data) => await  Reserva.update(data, { where: {id_reserva: id } }),
+    delete: async (id) => await Reserva.destroy({ where: {id_reserva: id } }),
 };
 
-module.exports = pagoRepository;
+module.exports = ReservaRepository;

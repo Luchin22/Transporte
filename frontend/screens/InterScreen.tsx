@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';  // Usa otro tipo de íconos si lo prefieres
 
+
 const App = ({navigation}) => {
     const handleCrear = () => {
         navigation.navigate('Crear');
@@ -15,6 +16,11 @@ const App = ({navigation}) => {
     const handleGuia = () => {
         navigation.navigate('Guia');
     }
+
+    const handleDato = () => {
+        navigation.navigate('Dato');
+    }
+
   return (
     <View style={styles.container}>
       <View style={styles.row}>
@@ -36,6 +42,13 @@ const App = ({navigation}) => {
           <Icon name="route" size={50} color="#9C27B0" />
           <Text style={styles.iconText}>Ruta</Text>
         </TouchableOpacity>
+         <TouchableOpacity
+                  style={styles.iconContainer}
+                  onPress={handleDato}
+                >
+                  <Icon name="chart-bar" size={40} color="#9C27B0" />
+                  <Text style={styles.iconText}>Análisis de Datos</Text>
+                </TouchableOpacity>
       </View>
     </View>
   );

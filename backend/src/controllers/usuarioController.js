@@ -89,6 +89,23 @@ exports.createUsuarioSinToken = async (req, res) => {
       
     }
 };
+exports.updateUsuarioSinToken = async (req, res) => {
+    try {
+        const { id } = req.params; // ID del usuario desde la URL
+        const { nombre, apellido, telefono } = req.body; // Datos a actualizar desde el body
+
+        // Llama al servicio para actualizar el usuario
+        const result = await usuarioService.updateUsuario(id, { nombre, apellido, telefono });
+
+        if (result[0] === 1) {
+            res.json({ message: 'Usuario actualizado correctamente' });
+        } else {
+            res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: 'Error al actualizar el usuario' });
+    }
+};
 
 
 

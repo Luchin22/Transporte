@@ -1,21 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import RNPickerSelect from 'react-native-picker-select';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import axios from 'axios';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useUser } from '../context/UserContext'; // Importa el hook del contexto
 
-const API_URL = 'http://192.168.100.8:3000'; // URL de tu API
+
+
+
+const API_URL = 'http://192.168.0.139:3000'; // URL de tu API
 
 const HorarioScreen = ({ navigation }) => {
   const [rutas, setRutas] = useState([]);
   const [selectedOrigin, setSelectedOrigin] = useState('');
   const [selectedDestination, setSelectedDestination] = useState('');
   const [filteredData, setFilteredData] = useState([]);
+    const { userData, loading } = useUser();
+  
+  const menuOptions = [
+    { id: 1, name: 'Editar', screen: 'Editar', icon: 'edit' },
+    { id: 2, name: 'Historial', screen: 'Historial', icon: 'history' },
+    { id: 3, name: 'Payment', screen: 'Payment', icon: 'payment' },
+    { id: 4, name: 'Salir', screen: 'Login', icon: 'logout' },
+  ];
+  const handleNavigation = (screen) => {
+    navigation.navigate(screen, { usuario_id: userData?.usuario_id });
+  };
 
   useEffect(() => {
     const fetchRutas = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/rutas`);
+        const response = await axios.get(`${API_URL}/api/rutas/rutas-con-capacidad`);
         setRutas(response.data);
         setFilteredData(response.data);
       } catch (error) {
@@ -53,6 +68,7 @@ const HorarioScreen = ({ navigation }) => {
     });
   };
 
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Selecciona un Transporte</Text>
@@ -84,6 +100,14 @@ const HorarioScreen = ({ navigation }) => {
         disabled={!selectedOrigin}
       />
 
+      {/* Encabezado de la tabla */}
+      <View style={styles.tableHeader}>
+        <Text style={styles.tableHeaderText}>Origen</Text>
+        <Text style={styles.tableHeaderText}>Destino</Text>
+        <Text style={styles.tableHeaderText}>Distancia</Text>
+        <Text style={styles.tableHeaderText}>Capacidad</Text>
+      </View>
+
       {filteredData.length > 0 ? (
         <FlatList
           data={filteredData}
@@ -93,13 +117,8 @@ const HorarioScreen = ({ navigation }) => {
               <Text style={styles.tableText}>{item.origen}</Text>
               <Text style={styles.tableText}>{item.destino}</Text>
               <Text style={styles.tableText}>{item.distancia} km</Text>
-              <Text
-                style={[
-                  styles.tableText,
-                  item.estado === 'Activo' ? styles.activeStatus : styles.inactiveStatus,
-                ]}
-              >
-                {item.estado}
+              <Text style={styles.tableText}>
+                {item.Bus ? item.Bus.capacidad : 'N/A'}
               </Text>
             </View>
           )}
@@ -115,6 +134,20 @@ const HorarioScreen = ({ navigation }) => {
       >
         <Text style={styles.confirmButtonText}>Confirmar</Text>
       </TouchableOpacity>
+      {/* Footer */}
+            <View style={styles.footer}>
+              <TouchableOpacity onPress={() => handleNavigation('Horario')}>
+                <Icon name="home" size={30} color="black" />
+              </TouchableOpacity>
+      
+              <TouchableOpacity onPress={() => handleNavigation('Historial')}>
+                <Icon name="history" size={30} color="black" />
+              </TouchableOpacity>
+      
+              <TouchableOpacity onPress={() => handleNavigation('Perfil')}>
+                <Icon name="person" size={30} color="black" />
+              </TouchableOpacity>
+            </View>
     </View>
   );
 };
@@ -124,6 +157,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: '#f5f5f5',
+    marginTop: 50,
   },
   header: {
     fontSize: 24,
@@ -136,17 +170,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#000',
     marginBottom: 10,
-  },
-  picker: {
-    height: 50,
-    width: '100%',
-    backgroundColor: '#fff',
-    color: '#212121',
-    borderRadius: 5,
-    marginBottom: 20,
-  },
-  tableContainer: {
-    marginBottom: 20,
+    
   },
   tableHeader: {
     flexDirection: 'row',
@@ -176,12 +200,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
   },
-  activeStatus: {
-    color: 'blue',
-  },
-  inactiveStatus: {
-    color: 'red',
-  },
   noResultsText: {
     color: '#000',
     fontSize: 16,
@@ -196,7 +214,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   disabledButton: {
-    backgroundColor: '#cfcfcf', // Color para el botón deshabilitado
+    backgroundColor: '#cfcfcf',
   },
   confirmButtonText: {
     color: '#fff',
@@ -210,9 +228,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: '#ddd',
+    width: '100%',
   },
 });
-
 
 const pickerSelectStyles = StyleSheet.create({
   inputIOS: {

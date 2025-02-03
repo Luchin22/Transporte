@@ -3,6 +3,7 @@ const sequelize = require("../config/config");
 const Conductor = require("./Conductor");
 const Ruta = require("./Ruta");
 
+
 const Bus = sequelize.define("Bus", {
     id_bus: {
         type: DataTypes.INTEGER,
@@ -40,10 +41,18 @@ const Bus = sequelize.define("Bus", {
         type: DataTypes.INTEGER,
         allowNull: false,
     },
+    capacidad_inicial: { // Nueva columna
+        type: DataTypes.INTEGER,
+    },
     estado: {
         type: DataTypes.STRING,
-        defaultValue: "activo",
+        
     },
+    numero: {
+        type: DataTypes.STRING,
+       
+    },
+   
 }, {
     tableName: "buses",
     timestamps: false,
@@ -56,5 +65,6 @@ Bus.belongsTo(Conductor, { foreignKey: "id_conductor" });
 
 Bus.hasMany(Ruta, { foreignKey: 'id_bus' });
 Ruta.belongsTo(Bus, { foreignKey: 'id_bus' });
+
 
 module.exports = Bus;
