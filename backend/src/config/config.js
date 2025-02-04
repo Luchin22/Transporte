@@ -3,7 +3,7 @@ require("dotenv").config(); // Esto carga las variables del archivo .env
 
 console.log("DB_NAME:", process.env.DB_NAME); // Para verificar si las variables se cargan correctamente
 
-const sequelize = new Sequelize(
+const sequelize = new Sequelize(process.env.DATABASE_URL)(
     process.env.DB_NAME,
     process.env.DB_USER,
     process.env.DB_PASS,
