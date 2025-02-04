@@ -1,20 +1,18 @@
 const { Sequelize } = require("sequelize");
 require("dotenv").config(); // Esto carga las variables del archivo .env
 
-console.log("DATABASE_URL:", process.env.DATABASE_URL); // Verificar que la variable esté correctamente cargada
+console.log("DB_NAME:", process.env.DB_NAME); // Para verificar si las variables se cargan correctamente
 
-// Crear la instancia de Sequelize usando la URL de la base de datos directamente
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
-    dialect: "postgres", // Especifica explícitamente el dialecto
-    logging: false, // Desactivar logging para producción
-});
-
-sequelize.authenticate()
-    .then(() => {
-        console.log('Conexión a la base de datos establecida con éxito.');
-    })
-    .catch((error) => {
-        console.error('No se pudo conectar a la base de datos:', error);
-    });
+const sequelize = new Sequelize(
+    process.env.DB_NAME,
+    process.env.DB_USER,
+    process.env.DB_PASS,
+    {
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        dialect: "postgres",
+        logging: false, // Desactivar logging para producción
+    }
+);
 
 module.exports = sequelize;
