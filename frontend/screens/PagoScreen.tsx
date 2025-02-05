@@ -15,7 +15,9 @@ const PagoScreen = ({ route, navigation }) => {
   const { userData } = useUser(); // Datos del usuario desde el contexto
 
   const usuarioId = userData ? userData.usuario_id : null;
- 
+
+
+
   const [modalVisible, setModalVisible] = useState(false);
   const [tarjeta, setTarjeta] = useState('');
   const [expiracion, setExpiracion] = useState('');
