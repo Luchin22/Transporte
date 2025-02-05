@@ -3,12 +3,16 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, Animated, Scrol
 import { Controller, useForm } from 'react-hook-form';
 import { TextInput } from 'react-native-paper';
 import axios from 'axios';
+import { useUser } from '../context/UserContext'; // Importa el contexto
+
 
 const LoginScreen = ({ navigation }) => {
   const { control, handleSubmit, formState: { errors } } = useForm();
   const [showPassword, setShowPassword] = useState(false);
   const scale = useRef(new Animated.Value(1)).current; // Mejor uso para evitar renders innecesarios
-  const API_URL = 'http://192.168.0.139:3000/api/usuarios/sign-in';
+  const API_URL = 'https://transporte-production.up.railway.app/api/usuarios/sign-in';
+  const { fetchUserData } = useUser(); // Obtiene la función para cargar datos del usuario
+
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
@@ -21,18 +25,22 @@ const LoginScreen = ({ navigation }) => {
       if (response.status === 200) {
         const { usuario_id, rol_id } = response.data.usuario || {};
 
-        if (rol_id === 5) {
-          navigation.navigate('Home');
-        } else if (rol_id === 4) {
-          navigation.navigate('Perfil', { userId: usuario_id });
-        } else {
-          Alert.alert('Acceso Denegado', 'Rol no autorizado.');
+        if (usuario_id) {
+          console.log('Usuario autenticado, ID:', usuario_id);
+          fetchUserData(usuario_id); // Cargar datos del usuario
+        
+          if (rol_id === 5) {
+            navigation.navigate('Home');
+          } else if (rol_id === 4) {
+            navigation.navigate('Perfil', { userId: usuario_id });
+          } else {
+            Alert.alert('Acceso Denegado', 'Rol no autorizado.');
+          }
         }
       }
     } catch (error) {
       console.error('Error al conectar con el servidor:', error);
-      const errorMsg = error.response?.data?.message || 'No se pudo conectar con el servidor.';
-      
+      Alert.alert('Error', 'No se pudo conectar con el servidor.');
     }
   };
 

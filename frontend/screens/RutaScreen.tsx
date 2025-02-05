@@ -42,7 +42,7 @@ const RouteListScreen = ({ navigation, route }) => {
   useEffect(() => {
     const fetchRutas = async () => {
       try {
-        const response = await axios.get('http://192.168.0.139:3000/api/rutas/rutas-con-capacidad');
+        const response = await axios.get('https://transporte-production.up.railway.app/api/rutas/rutas-con-capacidad');
         setRutas(response.data);
       } catch (error) {
         console.error('Error al obtener las rutas:', error);
@@ -73,7 +73,7 @@ const RouteListScreen = ({ navigation, route }) => {
         }
     
         // Obtener horarios con capacidad
-        const response = await axios.get('http://192.168.0.139:3000/api/horarios/horarios-con-capacidad');
+        const response = await axios.get('https://transporte-production.up.railway.app/api/horarios/horarios-con-capacidad');
         const horariosConCapacidad = response.data;
     
         // Filtrar los horarios relacionados con la ruta seleccionada

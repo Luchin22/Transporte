@@ -16,7 +16,7 @@ const EmailVerificationScreen = () => {
 
     try {
       const response = await axios.post(
-        "http://192.168.0.139:3000/api/usuarios/forgot-password",
+        "https://transporte-production.up.railway.app/api/usuarios/forgot-password",
         { email }
       );
 

@@ -6,10 +6,10 @@ import { useForm, Controller } from "react-hook-form";
 import axios from "axios";
 
 const HorarioScreen = () => {
-  const API_HORARIOS = "http://192.168.0.139:3000/api/horarios";
-  const API_RUTAS = "http://192.168.0.139:3000/api/rutas";
-  const API_BUSES = "http://192.168.0.139:3000/api/buses";
-  const API_HORARIOS_CON_CAPACIDAD = "http://192.168.0.139:3000/api/horarios/horarios-con-capacidad";
+  const API_HORARIOS = "https://transporte-production.up.railway.app/api/horarios";
+  const API_RUTAS = "https://transporte-production.up.railway.app/api/rutas";
+  const API_BUSES = "https://transporte-production.up.railway.app/api/buses";
+  const API_HORARIOS_CON_CAPACIDAD = "https://transporte-production.up.railway.app/api/horarios/horarios-con-capacidad";
 
   const { control, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {

@@ -1,4 +1,7 @@
 const pagoService = require('../services/pagoService');
+const Stripe = require('stripe');
+const stripe = Stripe('sk_test_51QodBtEH6OlGQNeBZkoeeYmfqwcbGVO94JC8ofokk8DnbCd1KOxytVbApLtF1zfTZGKHEfq3P3WoNvYx4bwZIetm00T1X9FRaQ'); // Usa tu clave secreta
+
 
 exports.getAllPagos = async (req, res) => {
     try {
@@ -19,13 +22,22 @@ exports.getPagoById = async (req, res) => {
 };
 
 exports.createPago = async (req, res) => {
+    const { monto } = req.body; // El monto total que recibes desde el frontend
+  
     try {
-        const pago = await pagoService.createPago(req.body);
-        res.status(201).json(pago);
+      // Crear un PaymentIntent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: monto, // El monto en centavos
+        currency: 'usd', // Moneda
+      });
+  
+      // Retorna el clientSecret al frontend
+      res.json({ clientSecret: paymentIntent.client_secret });
     } catch (error) {
-        res.status(400).json({ error: error.message });
+      console.error('Error al crear el PaymentIntent:', error);
+      res.status(500).json({ error: 'Error al crear el PaymentIntent' });
     }
-};
+  };
 
 exports.updatePago = async (req, res) => {
     try {

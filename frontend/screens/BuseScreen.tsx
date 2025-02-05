@@ -14,8 +14,8 @@ import RNPickerSelect from "react-native-picker-select";
 import axios from "axios";
 
 const BusScreen = () => {
-  const API_URL = "http://192.168.0.139:3000/api/buses";
-  const CONDUCTORES_API = "http://192.168.0.139:3000/api/conductores";
+  const API_URL = "https://transporte-production.up.railway.app/api/buses";
+  const CONDUCTORES_API = "https://transporte-production.up.railway.app/api/conductores";
 
   const {
     control,
@@ -95,7 +95,7 @@ const BusScreen = () => {
     try {
       data.capacidad = data.capacidad_inicial;
       const response = await axios.patch(
-        `http://192.168.0.139:3000/api/buses/${selectedBusId}/update-dato`,
+        `https://transporte-production.up.railway.app/api/buses/${selectedBusId}/update-dato`,
         data
       );
       console.log("Bus actualizado:", response.data);

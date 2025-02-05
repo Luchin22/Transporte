@@ -12,7 +12,7 @@ import axios from "axios";
 import { useState, useEffect } from "react";
 
 const ConductorScreen = () => {
-  const API_URL = "http://192.168.0.139:3000/api/conductores";
+  const API_URL = "https://transporte-production.up.railway.app/api/conductores";
   
   const { control, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {

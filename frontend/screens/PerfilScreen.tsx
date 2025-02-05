@@ -1,4 +1,6 @@
-import React from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
+
 import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity, FlatList, Image, Alert  } from 'react-native';
 import { useUser } from '../context/UserContext'; // Importa el hook del contexto
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -17,6 +19,10 @@ const PerfilScreen = ({navigation}) => {
     navigation.navigate(screen, { usuario_id: userData?.usuario_id });
   };
 
+
+  useEffect(() => {
+    console.log('Datos del usuario en Perfil:', userData);
+  }, [userData]);
 
   if (loading) {
     return (

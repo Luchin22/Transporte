@@ -26,7 +26,7 @@ const EditarScreen = ({ navigation }) => {
 
     try {
       const response = await axios.put(
-        `http://192.168.0.139:3000/api/usuarios/usuarioSinToken/${userData?.usuario_id}`,
+        `https://transporte-production.up.railway.app/api/usuarios/usuarioSinToken/${userData?.usuario_id}`,
         {
           nombre,
           apellido,

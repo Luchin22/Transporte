@@ -17,7 +17,7 @@ const HistorialScreen = ({ route, navigation }) => {
   useEffect(() => {
     const fetchHistorialData = async () => {
       try {
-        const response = await axios.get('http://192.168.0.139:3000/api/historial-reservas');
+        const response = await axios.get('https://transporte-production.up.railway.app/api/historial-reservas');
         const data = response.data;
         console.log('Datos recibidos:', data);  // Verifica los datos de la API
         console.log('usuario_id recibido:', usuario_id);  // Verifica el usuario_id recibido

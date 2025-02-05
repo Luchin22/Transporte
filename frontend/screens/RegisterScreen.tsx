@@ -1,23 +1,16 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, StyleSheet, ScrollView, Alert } from "react-native";
 import { TextInput, Button } from "react-native-paper";
 import { useForm, Controller } from "react-hook-form";
-import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
 
 const RegisterScreen = ({ navigation }) => {
-  const API_URL = "http://192.168.0.139:3000"; // Asegúrate de actualizar esta URL si es necesario
-  const [roles] = useState([
-    { id: 4, label: "Usuario" },
-    { id: 5, label: "Admin" },
-  ]);
-  
+  const API_URL = "https://transporte-production.up.railway.app";
 
   const {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
-    setValue,
   } = useForm({
     defaultValues: {
       nombre: "",
@@ -35,7 +28,7 @@ const RegisterScreen = ({ navigation }) => {
         `${API_URL}/api/usuarios/nuevoUsuarioSinToken`,
         data
       );
-  
+
       if (response.status === 201 || response.status === 200) {
         Alert.alert(
           "Registro Exitoso",
@@ -43,7 +36,7 @@ const RegisterScreen = ({ navigation }) => {
           [
             {
               text: "OK",
-              onPress: () => navigation.navigate("Login"), // Navegar a LoginScreen
+              onPress: () => navigation.navigate("Login"),
             },
           ],
           { cancelable: false }
@@ -59,15 +52,9 @@ const RegisterScreen = ({ navigation }) => {
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "No se pudo registrar el usuario.";
-      Alert.alert(
-        "Error",
-        errorMessage,
-        [{ text: "OK" }],
-        { cancelable: false }
-      );
+      Alert.alert("Error", errorMessage, [{ text: "OK" }], { cancelable: false });
     }
   };
-  
 
   return (
     <ScrollView>
@@ -75,7 +62,6 @@ const RegisterScreen = ({ navigation }) => {
         <View style={styles.formContainer}>
           <Text style={styles.title}>Formulario de Registro</Text>
 
-          {/* Nombre */}
           <Controller
             control={control}
             name="nombre"
@@ -96,7 +82,6 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.errorText}>{errors.nombre.message}</Text>
           )}
 
-          {/* Apellido */}
           <Controller
             control={control}
             name="apellido"
@@ -117,7 +102,6 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.errorText}>{errors.apellido.message}</Text>
           )}
 
-          {/* Email */}
           <Controller
             control={control}
             name="email"
@@ -145,7 +129,6 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.errorText}>{errors.email.message}</Text>
           )}
 
-          {/* Teléfono */}
           <Controller
             control={control}
             name="telefono"
@@ -173,7 +156,6 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.errorText}>{errors.telefono.message}</Text>
           )}
 
-          {/* Contraseña */}
           <Controller
             control={control}
             name="password"
@@ -201,30 +183,6 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.errorText}>{errors.password.message}</Text>
           )}
 
-          {/* Rol */}
-          <Controller
-            control={control}
-            name="rol_id"
-            rules={{ required: "El rol es obligatorio" }}
-            render={({ field: { onChange, value } }) => (
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={value}
-                  onValueChange={onChange}
-                  style={styles.picker}
-                >
-                  {roles.map((rol) => (
-                    <Picker.Item key={rol.id} label={rol.label} value={rol.id} />
-                  ))}
-                </Picker>
-              </View>
-            )}
-          />
-          {errors.rol_id && (
-            <Text style={styles.errorText}>{errors.rol_id.message}</Text>
-          )}
-
-          {/* Botón de Registro */}
           <Button
             mode="contained"
             onPress={handleSubmit(onSubmit)}
@@ -241,39 +199,12 @@ const RegisterScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  formContainer: {
-    padding: 20,
-  },
-  title: {
-    marginTop: 30,
-    fontSize: 24,
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  input: {
-    marginBottom: 12,
-  },
-  errorText: {
-    color: "red",
-    marginBottom: 10,
-    marginLeft: 10,
-  },
-  button: {
-    marginTop: 10,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: "#000000",
-    borderRadius: 4,
-    marginBottom: 10,
-  },
-  picker: {
-    height: 40,
-    width: "100%",
-  },
+  container: { flex: 1 },
+  formContainer: { padding: 20 },
+  title: { marginTop: 30, fontSize: 24, marginBottom: 20, textAlign: "center" },
+  input: { marginBottom: 12 },
+  errorText: { color: "red", marginBottom: 10, marginLeft: 10 },
+  button: { marginTop: 10 },
 });
 
 export default RegisterScreen;

@@ -41,7 +41,7 @@ const BusSeats = ({ navigation, route }) => {
     const fetchOccupiedSeats = async () => {
       try {
         // Realizar la solicitud al endpoint de asientos ocupados
-        const response = await axios.get('http://192.168.0.139:3000/api/asientos');
+        const response = await axios.get('https://transporte-production.up.railway.app/api/asientos');
         
         // Filtrar asientos ocupados por bus, estado y fecha
         const occupied = response.data

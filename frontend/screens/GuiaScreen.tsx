@@ -16,9 +16,9 @@ import axios from "axios";
 import { Picker } from '@react-native-picker/picker';
 
 const RutaScreen = () => {
-  const API_URL = "http://192.168.0.139:3000/api/rutas";
-  const API_RUTAS_CON_CAPACIDAD = "http://192.168.0.139:3000/api/rutas/rutas-con-capacidad";
-  const API_BUSES = "http://192.168.0.139:3000/api/buses";
+  const API_URL = "https://transporte-production.up.railway.app/api/rutas";
+  const API_RUTAS_CON_CAPACIDAD = "https://transporte-production.up.railway.app/api/rutas/rutas-con-capacidad";
+  const API_BUSES = "https://transporte-production.up.railway.app/api/buses";
 
   const { control, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {

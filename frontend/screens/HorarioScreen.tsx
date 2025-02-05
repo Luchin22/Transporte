@@ -8,7 +8,7 @@ import { useUser } from '../context/UserContext'; // Importa el hook del context
 
 
 
-const API_URL = 'http://192.168.0.139:3000'; // URL de tu API
+const API_URL = 'https://transporte-production.up.railway.app'; // URL de tu API
 
 const HorarioScreen = ({ navigation }) => {
   const [rutas, setRutas] = useState([]);
