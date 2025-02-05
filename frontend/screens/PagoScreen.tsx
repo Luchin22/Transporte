@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, Dimensions } from 'react-native';
+import { ScrollView, Dimensions, Linking } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert } from 'react-native';
 import * as Print from 'expo-print';
@@ -15,7 +15,14 @@ const PagoScreen = ({ route, navigation }) => {
   const { userData } = useUser(); // Datos del usuario desde el contexto
 
   const usuarioId = userData ? userData.usuario_id : null;
-
+  const paymentLink = "https://buy.stripe.com/test_cN2aEY8B52v9gk8aEF";
+  const handlePagoStripe = () => {
+    // Abre el enlace de Stripe Checkout en el navegador
+    Linking.openURL(paymentLink).catch((err) => {
+      console.error("Error al abrir el enlace de Stripe", err);
+      Alert.alert("Error", "Hubo un problema al abrir el enlace de pago.");
+    });
+  };
 
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -278,6 +285,9 @@ const PagoScreen = ({ route, navigation }) => {
         <TouchableOpacity style={styles.button} onPress={() => setModalVisible(true)}>
           <Text style={styles.buttonText}>Pagar</Text>
         </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={handlePagoStripe}>
+        <Text style={styles.buttonText}>Pagar con Stripe</Text>
+      </TouchableOpacity>
 
         <View style={styles.separator} />
 
