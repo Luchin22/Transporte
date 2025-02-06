@@ -4,7 +4,6 @@ const cors = require("cors");
 const sequelize = require("./config/config");
 const routes = require("./routes");
 const cron = require("./jobs/scheduler"); // Asegúrate de que este archivo existe
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY); // Asegúrate de tener tu clave secreta de Stripe
 
 
 
@@ -30,27 +29,7 @@ app.use((err, req, res, next) => {
 
 // Rutas
 app.use("/api", routes);
-router.get('/get-public-key', (req, res) => {
-    res.json({ publicKey: process.env.STRIPE_PUBLIC_KEY });
-  });
-  
-  // Ruta para crear el PaymentIntent
-  router.post('/create-payment-intent', async (req, res) => {
-    const { amount } = req.body; // El monto del pago que se va a procesar
-  
-    try {
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amount * 100, // Stripe trabaja en centavos
-        currency: 'usd', // Cambia a la moneda que necesites
-        automatic_payment_methods: { enabled: true },
-      });
-  
-      res.json({ clientSecret: paymentIntent.client_secret });
-    } catch (error) {
-      console.error(error);
-      res.status(500).send({ error: error.message });
-    }
-  });
+
 // Sincronización de Sequelize e inicialización de datos
 sequelize.sync({ force: false })
     .then(async () => {
