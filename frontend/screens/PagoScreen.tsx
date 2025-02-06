@@ -155,7 +155,7 @@ const PagoScreen = ({ route, navigation }) => {
   const createPaymentIntent = async () => {
     try {
       const response = await axios.post('https://transporte-production.up.railway.app/api/stripe/create-payment-intent', {
-        amount: total,
+        amount: total * 100,
         currency: 'usd',
       });
 

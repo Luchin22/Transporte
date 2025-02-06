@@ -7,7 +7,7 @@ const stripe = new Stripe('sk_test_51QodBtEH6OlGQNeBZkoeeYmfqwcbGVO94JC8ofokk8Dn
 const createPaymentIntent = async (amount, currency = 'usd') => {
   try {
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountInCents, // ✅ Enviar en centavos
+      amount: amount * 100, // Stripe maneja centavos
       currency,
       payment_method_types: ['card'],
     });
