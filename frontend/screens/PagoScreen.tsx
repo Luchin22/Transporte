@@ -7,7 +7,9 @@ import { useUser } from '../context/UserContext';  // Asegúrate de importar el 
 import { shareAsync } from 'expo-sharing';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import axios from 'axios';
+import { StripeProvider, useStripe, CardField } from '@stripe/stripe-react-native';
 
+const STRIPE_PUBLIC_KEY = "pk_test_51QodBtEH6OlGQNeBTJfWUDJrsYRrOfSoQhk9l3s77M4nv9YQNjgwirk6MS0kC0FGwsMiE9U0TJfOXpM8k0airsIb00FzMsTj24"; // Reemplaza con tu clave pública de Stripe
 
 
 const PagoScreen = ({ route, navigation }) => {
@@ -33,8 +35,10 @@ const PagoScreen = ({ route, navigation }) => {
   const [precioUnitario, setPrecioUnitario] = useState(0); // Precio por boleto
   const [total, setTotal] = useState(0); // Total calculado
   const [estado, setEstado] = useState('Pendiente');
- 
+  const { confirmPayment } = useStripe();
 
+  const [cardDetails, setCardDetails] = useState(null);
+  const [clientSecret, setClientSecret] = useState('');
 
   const menuOptions = [
     { id: 1, name: 'Editar', screen: 'Editar', icon: 'edit' },
@@ -148,18 +152,45 @@ const PagoScreen = ({ route, navigation }) => {
   };
   
 
-  const handleConfirmarPago = () => {
-    if (!tarjeta || !expiracion || !cvv) {
-      Alert.alert('Error', 'Por favor, completa todos los campos de la tarjeta.');
-      return;
+  const createPaymentIntent = async () => {
+    try {
+      const response = await axios.post('https://transporte-production.up.railway.app/api/stripe/create-payment-intent', {
+        amount: total,
+        currency: 'usd',
+      });
+
+      setClientSecret(response.data.clientSecret);
+      return response.data.clientSecret;
+    } catch (error) {
+      console.error("Error creando Payment Intent:", error);
+      Alert.alert("Error", "Hubo un problema al procesar el pago.");
+    }
+  };
+
+  const handleConfirmarPago = async () => {
+    if (!clientSecret) {
+      const secret = await createPaymentIntent();
+      if (!secret) return;
     }
 
-    setModalVisible(false);
+    const { error, paymentIntent } = await confirmPayment(clientSecret, {
+      paymentMethodType: 'Card',
+    });
 
-    enviarPago();
+    if (error) {
+      Alert.alert('Error', `Pago fallido: ${error.message}`);
+      console.log('Error en el pago:', error);
+    } else if (paymentIntent) {
+      Alert.alert('Éxito', 'Pago realizado correctamente.');
+      setModalVisible(false);
 
-    printToFile('Confirmación de Compra');
+      enviarPago();
+  
+      printToFile('Confirmación de Compra');
+    }
   };
+    
+
   const printToFile = async (tipo = 'Confirmación de Compra') => {
     const html = `
       <html>
@@ -256,6 +287,7 @@ const PagoScreen = ({ route, navigation }) => {
   };
   
   return (
+    <StripeProvider publishableKey={STRIPE_PUBLIC_KEY}>
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.userInfo}>
@@ -321,53 +353,29 @@ const PagoScreen = ({ route, navigation }) => {
       
 
       {/* Modal para información de tarjeta */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Información de la Tarjeta</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Número de Tarjeta"
-              keyboardType="numeric"
-              value={tarjeta}
-              onChangeText={(text) => setTarjeta(text)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Fecha de Expiración (MM/AA)"
-              value={expiracion}
-              onChangeText={(text) => setExpiracion(text)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="CVV"
-              keyboardType="numeric"
-              secureTextEntry={true}
-              value={cvv}
-              onChangeText={(text) => setCvv(text)}
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.buttonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.confirmButton]}
-                onPress={handleConfirmarPago}
-              >
-                <Text style={styles.buttonText}>Confirmar</Text>
-              </TouchableOpacity>
+      <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Información de la Tarjeta</Text>
+
+                <CardField
+                  postalCodeEnabled={false}
+                  placeholders={{ number: '4242 4242 4242 4242' }}
+                  onCardChange={(cardDetails) => setCardDetails(cardDetails)}
+                  style={styles.cardField}
+                />
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => setModalVisible(false)}>
+                    <Text style={styles.buttonText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={handleConfirmarPago}>
+                    <Text style={styles.buttonText}>Confirmar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
-      </Modal>
+          </Modal>
       {/* Footer */}
         <View style={styles.footer}>
           <TouchableOpacity onPress={() => handleNavigation('Horario')}>
@@ -382,6 +390,7 @@ const PagoScreen = ({ route, navigation }) => {
         </View>
         
     </View>
+    </StripeProvider>
   );
 };
 
@@ -503,6 +512,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#ddd',
     width: '100%',
+  },
+  cardField: {
+    width: '100%',
+    height: 50,
+    marginVertical: 10,
   },
 });
 
