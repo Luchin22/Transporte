@@ -6,8 +6,12 @@ const stripe = new Stripe('sk_test_51QodBtEH6OlGQNeBZkoeeYmfqwcbGVO94JC8ofokk8Dn
  */
 const createPaymentIntent = async (amount, currency = 'usd') => {
   try {
+    if (!amount || amount < 50) {  // Mínimo permitido en Stripe es 50 centavos ($0.50)
+      throw new Error("El monto debe ser mayor a $0.50 y estar en centavos.");
+    }
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount, // Stripe maneja centavos
+      amount: Math.round(amount), // Asegurar que siempre es un entero
       currency,
       payment_method_types: ['card'],
     });
@@ -18,5 +22,6 @@ const createPaymentIntent = async (amount, currency = 'usd') => {
     throw error;
   }
 };
+
 
 module.exports = { createPaymentIntent };
