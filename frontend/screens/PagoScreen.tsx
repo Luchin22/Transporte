@@ -155,10 +155,9 @@ const PagoScreen = ({ route, navigation }) => {
   const createPaymentIntent = async () => {
     try {
       const response = await axios.post('https://transporte-production.up.railway.app/api/stripe/create-payment-intent', {
-        amount: total * 100,
+        amount: total * 100, // Convertimos a centavos
         currency: 'usd',
       });
-
       setClientSecret(response.data.clientSecret);
       return response.data.clientSecret;
     } catch (error) {
@@ -173,9 +172,12 @@ const PagoScreen = ({ route, navigation }) => {
       if (!secret) return;
     }
 
-    const { error, paymentIntent } = await confirmPayment(clientSecret, {
-      paymentMethodType: 'Card',
-    });
+    if (!cardDetails?.complete) {
+      Alert.alert("Error", "Por favor, completa los datos de la tarjeta.");
+      return;
+    }
+
+    const { error, paymentIntent } = await confirmPayment(clientSecret, { paymentMethodType: 'Card' });
 
     if (error) {
       Alert.alert('Error', `Pago fallido: ${error.message}`);
@@ -189,6 +191,8 @@ const PagoScreen = ({ route, navigation }) => {
       printToFile('Confirmación de Compra');
     }
   };
+     
+
     
 
   const printToFile = async (tipo = 'Confirmación de Compra') => {
@@ -354,28 +358,31 @@ const PagoScreen = ({ route, navigation }) => {
 
       {/* Modal para información de tarjeta */}
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Información de la Tarjeta</Text>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Información de la Tarjeta</Text>
 
-                <CardField
-                  postalCodeEnabled={false}
-                  placeholders={{ number: '4242 4242 4242 4242' }}
-                  onCardChange={(cardDetails) => setCardDetails(cardDetails)}
-                  style={styles.cardField}
-                />
+              <CardField
+                postalCodeEnabled={false}
+                placeholders={{ number: '4242 4242 4242 4242' }}
+                onCardChange={(details) => {
+                  console.log("Detalles de tarjeta:", details);
+                  setCardDetails(details);
+                }}
+                style={styles.cardField}
+              />
 
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => setModalVisible(false)}>
-                    <Text style={styles.buttonText}>Cancelar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={handleConfirmarPago}>
-                    <Text style={styles.buttonText}>Confirmar</Text>
-                  </TouchableOpacity>
-                </View>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => setModalVisible(false)}>
+                  <Text style={styles.buttonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={handleConfirmarPago}>
+                  <Text style={styles.buttonText}>Confirmar</Text>
+                </TouchableOpacity>
               </View>
             </View>
-          </Modal>
+          </View>
+        </Modal>
       {/* Footer */}
         <View style={styles.footer}>
           <TouchableOpacity onPress={() => handleNavigation('Horario')}>
@@ -389,7 +396,7 @@ const PagoScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
         
-    </View>
+      </View>
     </StripeProvider>
   );
 };
