@@ -1,9 +1,8 @@
+import 'react-native-polyfill-globals/auto';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-
 import { UserProvider } from './context/UserContext'; // Importa el contexto de usuario
-import { StripeProvider } from '@stripe/stripe-react-native';
 
 // Importa tus pantallas
 import LoginScreen from './screens/LoginScreen';
@@ -54,7 +53,6 @@ const Stack = createStackNavigator<RootStackParamList>();
 
 export default function App() {
   return (
-    <StripeProvider publishableKey="pk_test_51QodBtEH6OlGQNeBTJfWUDJrsYRrOfSoQhk9l3s77M4nv9YQNjgwirk6MS0kC0FGwsMiE9U0TJfOXpM8k0airsIb00FzMsTj24">
     <UserProvider> {/* Envuelve todo con el contexto */}
       <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -80,6 +78,5 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </UserProvider>
-    </StripeProvider>
   );
 }
