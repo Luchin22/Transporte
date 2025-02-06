@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { StripeProvider } from '@stripe/stripe-react-native';
 
 import { UserProvider } from './context/UserContext'; // Importa el contexto de usuario
 
@@ -52,7 +53,23 @@ type RootStackParamList = {
 const Stack = createStackNavigator<RootStackParamList>();
 
 export default function App() {
+  const [publishableKey, setPublishableKey] = useState('');
+
+  const fetchPublishableKey = async () => {
+    try {
+      const response = await fetch('https://transporte-production.up.railway.app/api/pagos/get-public-key');
+      const data = await response.json();
+      setPublishableKey(data.publicKey); // Usamos la clave pública que nos dio el backend
+    } catch (error) {
+      console.error('Error al obtener la clave pública:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchPublishableKey();
+  }, []);
   return (
+    <StripeProvider publishableKey={publishableKey}>
     <UserProvider> {/* Envuelve todo con el contexto */}
       <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -78,5 +95,6 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </UserProvider>
+    </StripeProvider>
   );
 }
