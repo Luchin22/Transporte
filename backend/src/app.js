@@ -10,6 +10,7 @@ const cron = require("./jobs/scheduler"); // Asegúrate de que este archivo exis
 const app = express();
 const PORT = process.env.PORT || 3005;
 
+
 // Middlewares
 app.use(express.json());
 
@@ -29,7 +30,8 @@ app.use((err, req, res, next) => {
 
 // Rutas
 app.use("/api", routes);
-
+const stripeRoutes = require('./routes/stripeRoutes');
+app.use('/api/stripe', stripeRoutes);
 // Sincronización de Sequelize e inicialización de datos
 sequelize.sync({ force: false })
     .then(async () => {

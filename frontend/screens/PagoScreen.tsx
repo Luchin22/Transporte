@@ -7,6 +7,7 @@ import { useUser } from '../context/UserContext';  // Asegúrate de importar el 
 import { shareAsync } from 'expo-sharing';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import axios from 'axios';
+import { useStripe, CardField } from '@stripe/stripe-react-native';
 
 
 
@@ -34,6 +35,7 @@ const PagoScreen = ({ route, navigation }) => {
   const [total, setTotal] = useState(0); // Total calculado
   const [estado, setEstado] = useState('Pendiente');
  
+  const { confirmPayment } = useStripe();
 
 
   const menuOptions = [
@@ -148,17 +150,41 @@ const PagoScreen = ({ route, navigation }) => {
   };
   
 
-  const handleConfirmarPago = () => {
-    if (!tarjeta || !expiracion || !cvv) {
-      Alert.alert('Error', 'Por favor, completa todos los campos de la tarjeta.');
-      return;
-    }
-
-    setModalVisible(false);
+  const handleConfirmarPago = async () => {
+    try {
+      // 1. Crear un Payment Intent en el backend
+      const response = await axios.post('https://transporte-production.up.railway.app/api/stripe/create-payment-intent', {
+        amount: total,
+        currency: 'usd',
+      });
+  
+      const clientSecret = response.data.clientSecret;
+  
+      // 2. Confirmar el pago en Stripe
+      const { error, paymentIntent } = await confirmPayment(clientSecret, {
+        paymentMethodType: 'Card',
+      });
+  
+      if (error) {
+        Alert.alert('Error en el pago', error.message);
+        return;
+      }
+  
+      if (paymentIntent && paymentIntent.status === 'Succeeded') {
+        Alert.alert('Pago exitoso', 'El pago ha sido confirmado.');
+  
+        // 3. Continuar con la lógica de envío de pago y generación de PDF
+        setModalVisible(false);
 
     enviarPago();
 
     printToFile('Confirmación de Compra');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo procesar el pago.');
+    }
+
+  
   };
   const printToFile = async (tipo = 'Confirmación de Compra') => {
     const html = `
