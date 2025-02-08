@@ -161,6 +161,20 @@ const PagoScreen = ({ route, navigation }) => {
       Alert.alert("Error", "Hubo un problema al procesar el pago.");
     }
   };
+  const handlePagoConTarjeta = async () => {
+    try {
+      const secret = await createPaymentIntent();
+      if (secret) {
+        setClientSecret(secret);
+        setModalVisible(true); // Solo abre el modal si se genera correctamente el clientSecret
+      } else {
+        Alert.alert("Error", "No se pudo generar la intención de pago.");
+      }
+    } catch (error) {
+      console.error("Error al iniciar el pago:", error);
+      Alert.alert("Error", "No se pudo iniciar el proceso de pago.");
+    }
+  };
 
   const handleConfirmarPago = async () => {
     if (!clientSecret) {
@@ -308,7 +322,7 @@ const PagoScreen = ({ route, navigation }) => {
        {/* Mostrar el total dinámicamente */}
        <Text style={styles.text}>Total: ${total.toFixed(2)}</Text>
 
-        <TouchableOpacity style={styles.button} onPress={() => setModalVisible(true)}>
+        <TouchableOpacity style={styles.button} onPress={handlePagoConTarjeta}>
           <Text style={styles.buttonText}>Pagar</Text>
         </TouchableOpacity>
           <TouchableOpacity style={styles.button} onPress={handlePagoStripe}>

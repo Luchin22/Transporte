@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import axios from 'axios';
 import { useUser } from '../context/UserContext'; // Asegúrate de importar el hook correctamente
@@ -114,13 +114,18 @@ const HistorialScreen = ({ route, navigation }) => {
   const renderTable = (data, headers, title) => (
     <View style={styles.tableContainer}>
       <Text style={styles.subtitle}>{title}</Text>
-      {renderHeader(headers)}
-      <FlatList
-        data={data}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => renderRow(item, headers)}
-        showsVerticalScrollIndicator={false}
-      />
+      {/* 🔹 Scroll horizontal para la tabla */}
+      <ScrollView horizontal={true}>
+        <View>
+          {renderHeader(headers)}
+          <FlatList
+            data={data}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => renderRow(item, headers)}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      </ScrollView>
     </View>
   );
 
@@ -130,9 +135,9 @@ const HistorialScreen = ({ route, navigation }) => {
       <SafeAreaView style={styles.container}>
         <Text style={styles.title}>Historial de Viajes</Text>
 
-        {renderTable(historialPago, ['Nombre', 'Categoria', 'Monto', 'Fecha_pago', 'Salida', 'Pasajeros', 'Estado'], 'Pagos')}
+        {renderTable(historialPago, ['Nombre', 'Categoria', 'Monto', 'Fecha_pago', 'Estado'], 'Pagos')}
 
-        {renderTable(historialReserva, ['Nombre', 'Categoria', 'Monto', 'Fecha_reserva', 'Salida', 'Pasajeros', 'Estado'], 'Reservas')}
+        {renderTable(historialReserva, ['Nombre', 'Categoria', 'Monto', 'Fecha_reserva', 'Estado'], 'Reservas')}
       </SafeAreaView>
 
       <View style={styles.footer}>
@@ -165,6 +170,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
     color: '#333',
+  },  headerCell: {
+    width: 100, // Ancho fijo para cada celda de encabezado
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+  },  cell: {
+    width: 100, // Ancho fijo para cada celda
+    textAlign: 'center',
+    color: '#555',
   },
   subtitle: {
     fontSize: 20,
@@ -186,23 +200,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#007BFF',
     paddingVertical: 10,
   },
-  headerCell: {
-    flex: 1,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-  },
+ 
   row: {
     flexDirection: 'row',
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
   },
-  cell: {
-    flex: 1,
-    textAlign: 'center',
-    color: '#555',
-  },
+ 
   statusComplete: {
     color: 'green',
     fontWeight: 'bold',

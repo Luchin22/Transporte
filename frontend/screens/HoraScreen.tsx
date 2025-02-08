@@ -28,7 +28,15 @@ const HorarioScreen = () => {
   const [horaSalidaSeleccionada, setHoraSalidaSeleccionada] = useState(""); // Nuevo estado
   const [modalVisible, setModalVisible] = useState(false); // Estado para mostrar el modal
   const [horarioSeleccionado, setHorarioSeleccionado] = useState(null); // Para guardar el horario seleccionado para editar
-
+  const fetchHorarios = async () => {
+    try {
+      const response = await axios.get(API_HORARIOS_CON_CAPACIDAD);
+      setHorarios(response.data.reverse()); // Invierte la lista para mostrar los últimos al final
+    } catch (error) {
+      console.error("Error fetching horarios:", error);
+    }
+  };
+  
   // Fetch data on load
   useEffect(() => {
     const fetchData = async () => {
@@ -94,6 +102,7 @@ const HorarioScreen = () => {
       Alert.alert("Éxito", "Horario registrado correctamente.");
       reset();
       // Actualizar la lista de horarios después de registrar uno nuevo
+
       setHorarios(prevHorarios => [...prevHorarios, response.data]); // Asumiendo que la respuesta tiene los datos del horario creado
     } catch (error) {
       console.error("Error registrando horario:", error);
@@ -107,6 +116,7 @@ const HorarioScreen = () => {
       await axios.delete(`${API_HORARIOS}/${id}`);
       setHorarios(horarios.filter(h => h.id !== id)); // Actualiza la lista de horarios
       Alert.alert("Éxito", "Horario eliminado.");
+      fetchHorarios();
     } catch (error) {
       console.error("Error eliminando horario:", error);
       Alert.alert("Error", "No se pudo eliminar el horario.");
@@ -128,6 +138,7 @@ const HorarioScreen = () => {
       setHorarios(horarios.map(h => (h.id_horario === horarioSeleccionado.id_horario ? updatedData : h)));
       setModalVisible(false);
       Alert.alert("Éxito", "Horario actualizado correctamente.");
+      fetchHorarios();
     } catch (error) {
       console.error("Error actualizando horario:", error);
       Alert.alert("Error", "No se pudo actualizar el horario.");
@@ -276,29 +287,45 @@ const HorarioScreen = () => {
       <View style={styles.listContainer}>
         <Text style={styles.title}>Horarios Registrados</Text>
         {horarios.length > 0 ? (
-          horarios.map((horario) => (
-            <View key={horario.id_horario} style={styles.horarioItem}>
-              <Text>{`Origen: ${horario.Rutum.origen} - Destino: ${horario.Rutum.destino}`}</Text>
-              <Text>{`Monto: ${horario.Rutum.monto} - Conductor: ${horario.Bus.Conductor.nombre_conductor}`}</Text>
-              <Text>{`Número de Bus: ${horario.Bus.numero} - Capacidad: ${horario.Bus.capacidad}`}</Text>
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setHorarioSeleccionado(horario);
-                    setModalVisible(true);
-                  }}
-                >
-                  <Text style={styles.buttonText}>Editar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDelete(horario.id_horario)}>
-                  <Text style={styles.buttonText}>Eliminar</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))
-        ) : (
-          <Text>No hay horarios registrados.</Text>
-        )}
+  horarios.map((horario) => (
+    <View key={horario.id_horario} style={styles.horarioItem}>
+      {horario.Rutum ? (
+        <>
+          <Text>{`Origen: ${horario.Rutum.origen} - Destino: ${horario.Rutum.destino}`}</Text>
+          <Text>{`Monto: ${horario.Rutum.monto || "No disponible"}`}</Text>
+        </>
+      ) : (
+        <Text style={styles.errorText}>Información de ruta no disponible</Text>
+      )}
+      
+      {horario.Bus && horario.Bus.Conductor ? (
+        <>
+          <Text>{`Conductor: ${horario.Bus.Conductor.nombre_conductor || "No disponible"}`}</Text>
+          <Text>{`Número de Bus: ${horario.Bus.numero || "No disponible"} - Capacidad: ${horario.Bus.capacidad || "N/A"}`}</Text>
+        </>
+      ) : (
+        <Text style={styles.errorText}>Información del bus no disponible</Text>
+      )}
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          onPress={() => {
+            setHorarioSeleccionado(horario);
+            setModalVisible(true);
+          }}
+        >
+          <Text style={styles.buttonText}>Editar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleDelete(horario.id_horario)}>
+          <Text style={styles.buttonText}>Eliminar</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  ))
+) : (
+  <Text>No hay horarios registrados.</Text>
+)}
+
       </View>
 
       {/* Modal para editar el horario */}

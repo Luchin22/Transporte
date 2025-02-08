@@ -118,14 +118,16 @@ const ConductorScreen = () => {
 
   const deleteConductor = async (id) => {
     try {
-      const response = await axios.delete(`${API_URL}/${id}`);
-      setConductores((prev) => prev.filter((conductor) => conductor.id_conductor !== id));
+      await axios.delete(`${API_URL}/${id}`);
       Alert.alert("Éxito", "Conductor eliminado correctamente.");
+      fetchConductores(); // Se vuelve a obtener la lista actualizada
     } catch (error) {
       console.error("Error eliminando conductor:", error);
       Alert.alert("Error", "No se pudo eliminar el conductor.");
     }
   };
+  
+
   
   const handleCancelEdit = () => {
     reset();
@@ -161,26 +163,27 @@ const ConductorScreen = () => {
           <Text style={styles.errorText}>{errors.nombre_conductor.message}</Text>
         )}
 
-        <Controller
-          control={control}
-          name="dni"
-          rules={{
-            required: "El DNI es obligatorio",
-            pattern: { value: /^\d+$/, message: "DNI inválido" },
-          }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              label="DNI"
-              mode="outlined"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              keyboardType="number-pad"
-              style={styles.input}
-              outlineColor={errors.dni ? "red" : "#78288c"}
-            />
-          )}
-        />
+           <Controller
+  control={control}
+  name="dni"
+  rules={{
+    required: "El DNI es obligatorio",
+    pattern: { value: /^\d{10}$/, message: "El DNI debe tener exactamente 10 dígitos" },
+  }}
+  render={({ field: { onChange, onBlur, value } }) => (
+    <TextInput
+      label="DNI"
+      mode="outlined"
+      onBlur={onBlur}
+      onChangeText={onChange}
+      value={value}
+      keyboardType="number-pad"
+      style={styles.input}
+      outlineColor={errors.dni ? "red" : "#78288c"}
+    />
+  )}
+/>
+
         {errors.dni && <Text style={styles.errorText}>{errors.dni.message}</Text>}
 
         <Controller

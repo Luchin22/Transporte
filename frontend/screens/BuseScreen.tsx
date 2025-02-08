@@ -62,6 +62,14 @@ const BusScreen = () => {
     fetchBuses();
     fetchConductores();
   }, []);
+  const fetchBuses = async () => {
+    try {
+      const response = await axios.get(API_URL);
+      setBuses(response.data);
+    } catch (error) {
+      console.error("Error fetching buses:", error);
+    }
+  };
   const onSubmit = async (data) => {
     try {
       data.capacidad = data.capacidad_inicial;
@@ -100,6 +108,7 @@ const BusScreen = () => {
       );
       console.log("Bus actualizado:", response.data);
       // Actualiza el estado aquí si es necesario
+      fetchBuses();
       setBuses((prev) =>
         prev.map((bus) =>
           bus.id === selectedBusId ? { ...bus, ...data } : bus
@@ -115,17 +124,18 @@ const BusScreen = () => {
   
 
   const openEditModal = (bus) => {
-    console.log("Bus seleccionado:", bus); // Verifica el bus aquí
-    setSelectedBusId(bus.id_bus); // Esto debe asignar el ID del bus
+    console.log("Bus seleccionado:", bus);
+    setSelectedBusId(bus.id_bus);
     setValue("placa", bus.placa);
     setValue("marca", bus.marca);
     setValue("modelo", bus.modelo);
-    setValue("capacidad_inicial", bus.capacidad_inicial);
+    setValue("capacidad_inicial", String(bus.capacidad)); // Asegura que es un string
     setValue("estado", bus.estado);
-    setValue("numero", bus.numero);
+    setValue("numero", String(bus.numero));
     setValue("id_conductor", bus.id_conductor);
     setEditModalVisible(true);
   };
+  
   
 
 

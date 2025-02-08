@@ -46,6 +46,19 @@ const RutaScreen = () => {
     };
     fetchRutas();
   }, []);
+  const ciudadesEcuador = [
+    { label: "Quito", value: "Quito" },
+    { label: "Guayaquil", value: "Guayaquil" },
+    { label: "Cuenca", value: "Cuenca" },
+    { label: "Ambato", value: "Ambato" },
+    { label: "Riobamba", value: "Riobamba" },
+    { label: "Manta", value: "Manta" },
+    { label: "Portoviejo", value: "Portoviejo" },
+    { label: "Machala", value: "Machala" },
+    { label: "Loja", value: "Loja" },
+    { label: "Ibarra", value: "Ibarra" },
+  ];
+  
 
   // Add or edit ruta
   const onSubmit = async (data) => {
@@ -72,15 +85,18 @@ const RutaScreen = () => {
     setValue("origen", ruta.origen);
     setValue("destino", ruta.destino);
     setValue("distancia", ruta.distancia.toString());
-    setValue("monto", ruta.monto);
-    setModalVisible(true); // Open modal
+    setValue("monto", ruta.monto.toString()); // Asegurar que monto se maneje como string
+    setModalVisible(true);
   };
+  
 
   // Close the modal
   const closeModal = () => {
     setModalVisible(false);
     setSelectedRutaId(null); // Clear selected route
   };
+
+  
 
   // Delete ruta
   const deleteRuta = async (id) => {
@@ -117,43 +133,42 @@ const RutaScreen = () => {
           {selectedRutaId ? "Editar Ruta" : "Registrar Ruta"}
         </Text>
 
-        {/* Origen */}
-        <Controller
-          control={control}
-          name="origen"
-          rules={{ required: "El origen es obligatorio" }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              label="Origen"
-              mode="outlined"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              style={styles.input}
-              outlineColor={errors.origen ? "red" : "#78288c"}
-            />
-          )}
-        />
-        {errors.origen && <Text style={styles.errorText}>{errors.origen.message}</Text>}
+{/* Origen */}
+<Controller
+  control={control}
+  name="origen"
+  rules={{ required: "El origen es obligatorio" }}
+  render={({ field: { onChange, value } }) => (
+    <View style={styles.pickerContainer}>
+      <Text>Origen:</Text>
+      <Picker selectedValue={value} onValueChange={onChange}>
+        <Picker.Item label="Seleccione una ciudad" value="" />
+        {ciudadesEcuador.map((ciudad) => (
+          <Picker.Item key={ciudad.value} label={ciudad.label} value={ciudad.value} />
+        ))}
+      </Picker>
+      {errors.origen && <Text style={styles.errorText}>{errors.origen.message}</Text>}
+    </View>
+  )}
+/>
 
-        {/* Destino */}
-        <Controller
-          control={control}
-          name="destino"
-          rules={{ required: "El destino es obligatorio" }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              label="Destino"
-              mode="outlined"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              style={styles.input}
-              outlineColor={errors.destino ? "red" : "#78288c"}
-            />
-          )}
-        />
-        {errors.destino && <Text style={styles.errorText}>{errors.destino.message}</Text>}
+<Controller
+  control={control}
+  name="destino"
+  rules={{ required: "El destino es obligatorio" }}
+  render={({ field: { onChange, value } }) => (
+    <View style={styles.pickerContainer}>
+      <Text>Destino:</Text>
+      <Picker selectedValue={value} onValueChange={onChange}>
+        <Picker.Item label="Seleccione una ciudad" value="" />
+        {ciudadesEcuador.map((ciudad) => (
+          <Picker.Item key={ciudad.value} label={ciudad.label} value={ciudad.value} />
+        ))}
+      </Picker>
+      {errors.destino && <Text style={styles.errorText}>{errors.destino.message}</Text>}
+    </View>
+  )}
+/>
 
         {/* Distancia */}
         <Controller
@@ -178,24 +193,29 @@ const RutaScreen = () => {
         />
         {errors.distancia && <Text style={styles.errorText}>{errors.distancia.message}</Text>}
 
-        {/* Monto */}
-        <Controller
-          control={control}
-          name="monto"
-          rules={{ required: "El monto es obligatorio" }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              label="Monto por asiento"
-              mode="outlined"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              style={styles.input}
-              outlineColor={errors.monto ? "red" : "#78288c"}
-            />
-          )}
-        />
-        {errors.monto && <Text style={styles.errorText}>{errors.monto.message}</Text>}
+{/* Monto */}
+<Controller
+  control={control}
+  name="monto"
+  rules={{
+    required: "El monto es obligatorio",
+    pattern: { value: /^[0-9]+(\.[0-9]{1,2})?$/, message: "Ingrese un monto válido" },
+  }}
+  render={({ field: { onChange, value } }) => (
+    <TextInput
+      label="Monto"
+      mode="outlined"
+      keyboardType="numeric"
+      onChangeText={onChange}
+      value={value}
+      style={styles.input}
+      outlineColor={errors.monto ? "red" : "#78288c"}
+    />
+  )}
+/>
+{errors.monto && <Text style={styles.errorText}>{errors.monto.message}</Text>}
+
+
 
         <Button
           mode="contained"
@@ -242,36 +262,44 @@ const RutaScreen = () => {
           <View style={styles.modalBackground}>
             <View style={styles.modalContainer}>
               <Text style={styles.title}>Editar Ruta</Text>
-              <Controller
-                control={control}
-                name="origen"
-                rules={{ required: "El origen es obligatorio" }}
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    label="Origen"
-                    mode="outlined"
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                    style={styles.input}
-                  />
-                )}
-              />
-              <Controller
-                control={control}
-                name="destino"
-                rules={{ required: "El destino es obligatorio" }}
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    label="Destino"
-                    mode="outlined"
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                    style={styles.input}
-                  />
-                )}
-              />
+             {/* Origen en el Modal */}
+<Controller
+  control={control}
+  name="origen"
+  rules={{ required: "El origen es obligatorio" }}
+  render={({ field: { onChange, value } }) => (
+    <View style={styles.pickerContainer}>
+      <Text>Origen:</Text>
+      <Picker selectedValue={value} onValueChange={onChange}>
+        <Picker.Item label="Seleccione una ciudad" value="" />
+        {ciudadesEcuador.map((ciudad) => (
+          <Picker.Item key={ciudad.value} label={ciudad.label} value={ciudad.value} />
+        ))}
+      </Picker>
+      {errors.origen && <Text style={styles.errorText}>{errors.origen.message}</Text>}
+    </View>
+  )}
+/>
+
+{/* Destino en el Modal */}
+<Controller
+  control={control}
+  name="destino"
+  rules={{ required: "El destino es obligatorio" }}
+  render={({ field: { onChange, value } }) => (
+    <View style={styles.pickerContainer}>
+      <Text>Destino:</Text>
+      <Picker selectedValue={value} onValueChange={onChange}>
+        <Picker.Item label="Seleccione una ciudad" value="" />
+        {ciudadesEcuador.map((ciudad) => (
+          <Picker.Item key={ciudad.value} label={ciudad.label} value={ciudad.value} />
+        ))}
+      </Picker>
+      {errors.destino && <Text style={styles.errorText}>{errors.destino.message}</Text>}
+    </View>
+  )}
+/>
+
               <Controller
                 control={control}
                 name="distancia"
@@ -351,6 +379,20 @@ const styles = StyleSheet.create({
     padding: 20,
     width: "80%",
     borderRadius: 10,
+  },
+  pickerContainer: {
+    marginBottom: 10,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#78288c",
+    borderRadius: 5,
+    paddingHorizontal: 10,
+  },
+
+  picker: {
+    height: 50,
+    width: "100%",
+    color: "#000",
   },
 });
 
