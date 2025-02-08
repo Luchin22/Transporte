@@ -9,15 +9,20 @@ const EmailVerificationScreen = () => {
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [isCodeSent, setIsCodeSent] = useState(false);
-  const [isCodeValid, setIsCodeValid] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
 
-  // Función para enviar el código al correo
+  // Función para enviar el código de recuperación
   const sendCode = async () => {
+    if (!email.includes("@")) {
+      Alert.alert("Error", "Ingrese un correo electrónico válido.");
+      return;
+    }
+
     try {
       const response = await axios.post(`${API_URL}/forgot-password`, { email });
 
       if (response.status === 200) {
-        Alert.alert("Código enviado", `Se ha enviado un código de validación a ${email}.`);
+        Alert.alert("Código enviado", `Se ha enviado un código de recuperación a ${email}.`);
         setIsCodeSent(true);
       }
     } catch (error) {
@@ -25,22 +30,13 @@ const EmailVerificationScreen = () => {
     }
   };
 
-  // Función para verificar el código
-  const confirmCode = async () => {
-    try {
-      const response = await axios.post(`${API_URL}/validate-code`, { email, resetCode: code });
-
-      if (response.status === 200) {
-        setIsCodeValid(true);
-        Alert.alert("Código correcto", "Ahora puedes cambiar tu contraseña.");
-      }
-    } catch (error) {
-      Alert.alert("Error", "El código ingresado es incorrecto o ha expirado.");
+  // Función para restablecer la contraseña
+  const resetPassword = async () => {
+    if (code.length === 0) {
+      Alert.alert("Error", "Ingrese el código de recuperación.");
+      return;
     }
-  };
 
-  // Función para cambiar la contraseña
-  const changePassword = async () => {
     if (newPassword.length < 8) {
       Alert.alert("Error", "La contraseña debe tener al menos 8 caracteres.");
       return;
@@ -50,20 +46,28 @@ const EmailVerificationScreen = () => {
       const response = await axios.post(`${API_URL}/reset-password`, {
         email,
         resetCode: code,
-        newPassword
+        newPassword,
       });
 
       if (response.status === 200) {
-        Alert.alert("Éxito", "Contraseña actualizada correctamente.");
+        Alert.alert("Éxito", "Contraseña restablecida con éxito.");
+        setIsPasswordReset(true);
+        // Limpiar estados
+        setEmail("");
+        setCode("");
+        setNewPassword("");
+        setIsCodeSent(false);
       }
     } catch (error) {
-      Alert.alert("Error", "No se pudo cambiar la contraseña.");
+      Alert.alert("Error", error.response?.data?.error || "No se pudo cambiar la contraseña.");
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Recuperar Contraseña</Text>
+
+      {/* Input de correo */}
       <TextInput
         style={styles.input}
         placeholder="Ingrese su correo electrónico"
@@ -75,6 +79,7 @@ const EmailVerificationScreen = () => {
 
       {isCodeSent && (
         <>
+          {/* Input de código */}
           <TextInput
             style={styles.input}
             placeholder="Ingrese el código recibido"
@@ -82,12 +87,8 @@ const EmailVerificationScreen = () => {
             value={code}
             onChangeText={setCode}
           />
-          <Button title="Confirmar Código" onPress={confirmCode} />
-        </>
-      )}
 
-      {isCodeValid && (
-        <>
+          {/* Input de nueva contraseña */}
           <TextInput
             style={styles.input}
             placeholder="Ingrese nueva contraseña"
@@ -95,17 +96,45 @@ const EmailVerificationScreen = () => {
             value={newPassword}
             onChangeText={setNewPassword}
           />
-          <Button title="Cambiar Contraseña" onPress={changePassword} />
+
+          <Button title="Restablecer Contraseña" onPress={resetPassword} />
         </>
       )}
+
+      {isPasswordReset && <Text style={styles.success}>Contraseña actualizada correctamente.</Text>}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20, backgroundColor: "#f5f5f5" },
-  title: { fontSize: 20, fontWeight: "bold", textAlign: "center", marginBottom: 20 },
-  input: { height: 50, borderWidth: 1, borderColor: "#000", borderRadius: 5, marginBottom: 10, paddingHorizontal: 10, backgroundColor: "#fff" }
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 20,
+    backgroundColor: "#f5f5f5",
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  input: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: "#000",
+    borderRadius: 5,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    backgroundColor: "#fff",
+  },
+  success: {
+    marginTop: 20,
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "green",
+    textAlign: "center",
+  },
 });
 
 export default EmailVerificationScreen;

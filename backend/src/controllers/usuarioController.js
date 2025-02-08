@@ -2,6 +2,8 @@ const usuarioService = require('../services/usuarioService');
 const authService = require('../services/authService');
 const nodemailer = require("nodemailer");
 const usuarioRepository = require("../repositories/usuarioRepository");
+const bcrypt = require("bcrypt");
+
 
 const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -83,27 +85,54 @@ exports.resetPassword = async (req, res) => {
     try {
         const { email, resetCode, newPassword } = req.body;
 
-        // Verificar si el email existe
+        console.log("📩 Email recibido:", email);
+        console.log("🔑 Código ingresado:", resetCode);
+        console.log("🔒 Nueva contraseña:", newPassword);
+
+        // Buscar el usuario en la BD
         const usuario = await usuarioRepository.findByEmail(email);
+        
         if (!usuario) {
+            console.log("❌ Usuario no encontrado en la BD:", email);
             return res.status(400).json({ error: "Correo no registrado" });
         }
 
-        // Verificar el código de recuperación
-        if (usuario.reset_token !== resetCode || usuario.reset_token_expiration < new Date()) {
-            return res.status(400).json({ error: "Código inválido o expirado" });
+        console.log("✅ Usuario encontrado:", usuario.email);
+        console.log("📌 Código almacenado en BD:", usuario.reset_token);
+        console.log("⏳ Expiración del código:", usuario.reset_token_expiration);
+
+        // Verificar si el código está definido en la BD
+        if (!usuario.reset_token) {
+            console.log("❌ El usuario no tiene un código de recuperación almacenado");
+            return res.status(400).json({ error: "No se ha generado un código de recuperación para este usuario." });
         }
+
+        // Verificar si el código coincide
+        if (usuario.reset_token.toString() !== resetCode.toString()) {
+            console.log("❌ Código incorrecto. Código esperado:", usuario.reset_token);
+            return res.status(400).json({ error: "Código inválido o incorrecto." });
+        }
+
+        // Verificar si el código ha expirado
+        if (new Date(usuario.reset_token_expiration) < new Date()) {
+            console.log("❌ Código expirado");
+            return res.status(400).json({ error: "El código de recuperación ha expirado." });
+        }
+
+        console.log("✅ Código válido, procediendo con cambio de contraseña...");
 
         // Encriptar la nueva contraseña
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        // Actualizar la contraseña y limpiar el código
+        // Actualizar la contraseña y limpiar el código de recuperación
         await usuarioRepository.updatePassword(usuario.usuario_id, hashedPassword);
         await usuarioRepository.clearResetToken(usuario.usuario_id);
 
+        console.log("✅ Contraseña actualizada correctamente para usuario:", usuario.email);
         res.status(200).json({ message: "Contraseña restablecida con éxito" });
 
     } catch (error) {
+        console.error("❌ Error al restablecer la contraseña:", error);
         res.status(500).json({ error: "Error al restablecer la contraseña" });
     }
 };
@@ -149,13 +178,61 @@ exports.requestPasswordReset = async (req, res) => {
 // Endpoint para Restablecer la Contraseña
 exports.resetPassword = async (req, res) => {
     try {
-        const { resetToken, newPassword } = req.body;
-        await authService.resetPassword(resetToken, newPassword);
-        res.status(200).json({ message: 'Contraseña actualizada con éxito' });
+        const { email, resetCode, newPassword } = req.body;
+
+        console.log("📩 Email recibido:", email);
+        console.log("🔑 Código ingresado por el usuario:", resetCode);
+
+        // Buscar el usuario en la BD
+        const usuario = await usuarioRepository.findByEmail(email);
+        
+        if (!usuario) {
+            console.log("❌ Usuario no encontrado:", email);
+            return res.status(400).json({ error: "Correo no registrado" });
+        }
+
+        console.log("✅ Usuario encontrado:", usuario.email);
+        console.log("📌 Código almacenado en BD:", usuario.reset_token);
+        console.log("⏳ Expiración del código:", usuario.reset_token_expiration);
+
+        // Verificar si el código está definido en la BD
+        if (!usuario.reset_token) {
+            console.log("❌ El usuario no tiene un código de recuperación almacenado");
+            return res.status(400).json({ error: "No se ha generado un código de recuperación para este usuario." });
+        }
+
+        // Verificar si el código ingresado coincide con el almacenado
+        if (usuario.reset_token.toString() !== resetCode.toString()) {
+            console.log("❌ Código incorrecto.");
+            console.log("🔎 Código esperado:", usuario.reset_token);
+            console.log("🔎 Código ingresado:", resetCode);
+            return res.status(400).json({ error: "Código inválido o incorrecto." });
+        }
+
+        // Verificar si el código ha expirado
+        if (new Date(usuario.reset_token_expiration) < new Date()) {
+            console.log("❌ Código expirado");
+            return res.status(400).json({ error: "El código de recuperación ha expirado." });
+        }
+
+        console.log("✅ Código válido, procediendo con cambio de contraseña...");
+
+        // Encriptar la nueva contraseña
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Actualizar la contraseña y limpiar el código de recuperación
+        await usuarioRepository.updatePassword(usuario.usuario_id, hashedPassword);
+        await usuarioRepository.clearResetToken(usuario.usuario_id);
+
+        console.log("✅ Contraseña actualizada correctamente para usuario:", usuario.email);
+        res.status(200).json({ message: "Contraseña restablecida con éxito" });
+
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error("❌ Error al restablecer la contraseña:", error);
+        res.status(500).json({ error: "Error al restablecer la contraseña" });
     }
 };
+
 // Método para crear usuario sin autorización de token
 // Nuevo endpoint para crear usuarios sin autenticación (sin token)
 exports.createUsuarioSinToken = async (req, res) => {
