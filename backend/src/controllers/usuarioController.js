@@ -34,6 +34,26 @@ exports.refreshToken = async (req, res) => {
         res.status(403).json({ error: error.message });
     }
 };
+exports.getUsuarioByEmail = async (req, res) => {
+    try {
+        const { email } = req.query;
+
+        if (!email) {
+            return res.status(400).json({ error: "El email es requerido" });
+        }
+
+        const usuario = await usuarioRepository.findByEmail(email.trim().toLowerCase());
+        if (!usuario) {
+            return res.status(404).json({ error: "Usuario no encontrado" });
+        }
+
+        res.json(usuario);
+    } catch (error) {
+        console.error("❌ Error al buscar usuario por correo:", error);
+        res.status(500).json({ error: "Error en el servidor" });
+    }
+};
+
 
 exports.getPerfil = () => {
     json({

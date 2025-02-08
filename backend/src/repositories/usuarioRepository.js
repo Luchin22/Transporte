@@ -22,7 +22,9 @@ exports.delete = async (id) => {
 
 // Añadir el método findByEmail
 exports.findByEmail = async (email) => {
-    return await Usuario.findOne({ where: { email } });
+    return await Usuario.findOne({
+        where: { email: email.trim().toLowerCase() }  // Normaliza el email
+    });
 };
 
 // Función para almacenar el refresh token en la base de datos

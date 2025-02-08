@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, TextInput, Button, Text, StyleSheet, Alert } from "react-native";
 import axios from "axios";
 
-const API_URL = "http://localhost:3000/api/usuarios";
+const API_URL = "https://transporte-production.up.railway.app/api/usuarios";
 
 const EmailVerificationScreen = () => {
   const [email, setEmail] = useState("");

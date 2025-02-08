@@ -13,6 +13,7 @@ router.post('/register-admin', usuarioController.registerAdmin); // Ruta tempora
 // recuperacion de contrasenas
 router.post('/forgot-password', usuarioController.requestPasswordReset);
 router.post('/reset-password', usuarioController.resetPassword);
+router.get('/buscarPorCorreo', usuarioController.getUsuarioByEmail);
 
 // Rutas protegidas
 router.get('/perfil',  usuarioController.getPerfil); 
