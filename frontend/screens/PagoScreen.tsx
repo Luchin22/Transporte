@@ -9,13 +9,11 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import axios from 'axios';
 import { StripeProvider, useStripe, CardField } from '@stripe/stripe-react-native';
 
-const STRIPE_PUBLIC_KEY = "pk_test_51QodBtEH6OlGQNeBTJfWUDJrsYRrOfSoQhk9l3s77M4nv9YQNjgwirk6MS0kC0FGwsMiE9U0TJfOXpM8k0airsIb00FzMsTj24"; // Reemplaza con tu clave pública de Stripe
-
+const STRIPE_PUBLIC_KEY = "pk_test_51QodBtEH6OlGQNeBTJfWUDJrsYRrOfSoQhk9l3s77M4nv9YQNjgwirk6MS0kC0FGwsMiE9U0TJfOXpM8k0airsIb00FzMsTj24";
 
 const PagoScreen = ({ route, navigation }) => {
   const { numTickets = 0, selectedSeats = [], origen = '', destino = '', salida = '', llegada = '', nombre = '', idAsiento, nombreC = '', numeroBus = '', idBus = '', fechaIda = ''} = route.params || {};
-  const { userData } = useUser(); // Datos del usuario desde el contexto
-
+  const { userData } = useUser();
   const usuarioId = userData ? userData.usuario_id : null;
   const paymentLink = "https://buy.stripe.com/test_cN2aEY8B52v9gk8aEF";
   const handlePagoStripe = () => {
@@ -25,20 +23,15 @@ const PagoScreen = ({ route, navigation }) => {
       Alert.alert("Error", "Hubo un problema al abrir el enlace de pago.");
     });
   };
-
-
   const [modalVisible, setModalVisible] = useState(false);
-  const [tarjeta, setTarjeta] = useState('');
-  const [expiracion, setExpiracion] = useState('');
-  const [cvv, setCvv] = useState('');
   const [fechaReserva, setFechaReserva] = useState(new Date().toISOString().split('T')[0]);
   const [precioUnitario, setPrecioUnitario] = useState(0); // Precio por boleto
-  const [total, setTotal] = useState(0); // Total calculado
-  const [estado, setEstado] = useState('Pendiente');
-  const { confirmPayment } = useStripe();
-
-  const [cardDetails, setCardDetails] = useState(null);
+  const [total, setTotal] = useState(0);
   const [clientSecret, setClientSecret] = useState('');
+  const { confirmPayment } = useStripe();  
+  const [estado, setEstado] = useState('Pendiente');
+
+
 
   const menuOptions = [
     { id: 1, name: 'Editar', screen: 'Editar', icon: 'edit' },
@@ -57,6 +50,7 @@ const PagoScreen = ({ route, navigation }) => {
   };
 
   const [fecha, setFecha] = useState(getCurrentDate());
+
   useEffect(() => {
     // Simula la llamada a la API para obtener el precio unitario según el origen y destino
     const fetchPrecio = async () => {
@@ -152,13 +146,14 @@ const PagoScreen = ({ route, navigation }) => {
   };
   
 
+
   const createPaymentIntent = async () => {
     try {
       const response = await axios.post('https://transporte-production.up.railway.app/api/stripe/create-payment-intent', {
-        amount: Math.round(total * 100),  // Convertimos a centavos
+        amount: total * 100,
         currency: 'usd',
       });
-      
+
       setClientSecret(response.data.clientSecret);
       return response.data.clientSecret;
     } catch (error) {
@@ -173,12 +168,9 @@ const PagoScreen = ({ route, navigation }) => {
       if (!secret) return;
     }
 
-    if (!cardDetails?.complete) {
-      Alert.alert("Error", "Por favor, completa los datos de la tarjeta.");
-      return;
-    }
-
-    const { error, paymentIntent } = await confirmPayment(clientSecret, { paymentMethodType: 'Card' });
+    const { error, paymentIntent } = await confirmPayment(clientSecret, {
+      paymentMethodType: 'Card',
+    });
 
     if (error) {
       Alert.alert('Error', `Pago fallido: ${error.message}`);
@@ -192,10 +184,6 @@ const PagoScreen = ({ route, navigation }) => {
       printToFile('Confirmación de Compra');
     }
   };
-     
-
-    
-
   const printToFile = async (tipo = 'Confirmación de Compra') => {
     const html = `
       <html>
@@ -291,6 +279,7 @@ const PagoScreen = ({ route, navigation }) => {
     }
   };
   
+
   return (
     <StripeProvider publishableKey={STRIPE_PUBLIC_KEY}>
     <View style={styles.container}>
@@ -362,17 +351,12 @@ const PagoScreen = ({ route, navigation }) => {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Información de la Tarjeta</Text>
-
               <CardField
                 postalCodeEnabled={false}
                 placeholders={{ number: '4242 4242 4242 4242' }}
-                onCardChange={(details) => {
-                  console.log("Detalles de tarjeta:", details);
-                  setCardDetails(details);
-                }}
+                onCardChange={(cardDetails) => console.log(cardDetails)}
                 style={styles.cardField}
               />
-
               <View style={styles.modalButtons}>
                 <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => setModalVisible(false)}>
                   <Text style={styles.buttonText}>Cancelar</Text>
@@ -401,6 +385,7 @@ const PagoScreen = ({ route, navigation }) => {
     </StripeProvider>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -527,5 +512,4 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
 });
-
-export default PagoScreen;
+export default PagoScreen;
