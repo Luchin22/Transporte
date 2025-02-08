@@ -50,18 +50,76 @@ exports.registerAdmin = async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 };
+exports.resetPassword = async (req, res) => {
+    try {
+        const { email, resetCode, newPassword } = req.body;
+
+        // Verificar si el email existe
+        const usuario = await usuarioRepository.findByEmail(email);
+        if (!usuario) {
+            return res.status(400).json({ error: "Correo no registrado" });
+        }
+
+        // Verificar el código de recuperación
+        if (usuario.reset_token !== resetCode || usuario.reset_token_expiration < new Date()) {
+            return res.status(400).json({ error: "Código inválido o expirado" });
+        }
+
+        // Encriptar la nueva contraseña
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Actualizar la contraseña y limpiar el código
+        await usuarioRepository.updatePassword(usuario.usuario_id, hashedPassword);
+        await usuarioRepository.clearResetToken(usuario.usuario_id);
+
+        res.status(200).json({ message: "Contraseña restablecida con éxito" });
+
+    } catch (error) {
+        res.status(500).json({ error: "Error al restablecer la contraseña" });
+    }
+};
 
 // Endpoint para Solicitar el Token de Recuperación
 exports.requestPasswordReset = async (req, res) => {
     try {
         const { email } = req.body;
-        const resetToken = await authService.generateResetToken(email);
-        res.status(200).json({ message: 'Token de recuperación generado', resetToken }); // En un entorno real, envía el token por correo electrónico
+        
+        // Verificar si el email está registrado
+        const usuario = await usuarioRepository.findByEmail(email);
+        if (!usuario) {
+            return res.status(400).json({ error: "Correo no registrado" });
+        }
+
+        // Generar un código de 6 dígitos
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expirationDate = new Date(Date.now() + 15 * 60 * 1000); // Expira en 15 minutos
+
+        // Guardar el código en la base de datos
+        await usuarioRepository.storeResetToken(usuario.usuario_id, resetCode, expirationDate);
+
+        // Configurar el servicio de correo
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: "tucorreo@gmail.com",
+                pass: "tupassword"
+            }
+        });
+
+        // Enviar el código al correo
+        await transporter.sendMail({
+            from: "noreply@tuapp.com",
+            to: email,
+            subject: "Código de recuperación de contraseña",
+            text: `Tu código de recuperación es: ${resetCode}. Expira en 15 minutos.`
+        });
+
+        res.status(200).json({ message: "Código enviado a tu correo" });
+
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(500).json({ error: "Error al enviar el código" });
     }
 };
-
 // Endpoint para Restablecer la Contraseña
 exports.resetPassword = async (req, res) => {
     try {
