@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, TextInput, Button, Text, StyleSheet, Alert } from "react-native";
 import axios from "axios";
 
-const API_URL = "https://transporte-production.up.railway.app/api/usuarios";
+const API_URL = "http://localhost:3000/api/usuarios";
 
 const EmailVerificationScreen = () => {
   const [email, setEmail] = useState("");
@@ -11,7 +11,7 @@ const EmailVerificationScreen = () => {
   const [isCodeSent, setIsCodeSent] = useState(false);
   const [isCodeValid, setIsCodeValid] = useState(false);
 
-  // Enviar el código al correo
+  // Función para enviar el código al correo
   const sendCode = async () => {
     try {
       const response = await axios.post(`${API_URL}/forgot-password`, { email });
@@ -25,7 +25,7 @@ const EmailVerificationScreen = () => {
     }
   };
 
-  // Confirmar el código ingresado
+  // Función para verificar el código
   const confirmCode = async () => {
     try {
       const response = await axios.post(`${API_URL}/validate-code`, { email, resetCode: code });
@@ -39,7 +39,7 @@ const EmailVerificationScreen = () => {
     }
   };
 
-  // Cambiar la contraseña
+  // Función para cambiar la contraseña
   const changePassword = async () => {
     if (newPassword.length < 8) {
       Alert.alert("Error", "La contraseña debe tener al menos 8 caracteres.");

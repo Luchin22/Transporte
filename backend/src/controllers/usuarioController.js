@@ -1,6 +1,15 @@
 const usuarioService = require('../services/usuarioService');
 const authService = require('../services/authService');
+const nodemailer = require("nodemailer");
+const usuarioRepository = require("../repositories/usuarioRepository");
 
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: "reservatransporte177@gmail.com",
+        pass: "chdd hlrb dcyx ghgd"  // Asegúrate de usar una contraseña de aplicación
+    }
+});
 // Servicio de login
 exports.login = async (req, res) => {
     try {
@@ -84,29 +93,23 @@ exports.requestPasswordReset = async (req, res) => {
     try {
         const { email } = req.body;
         
-        // Verificar si el email está registrado
+        // Buscar el usuario en la BD
         const usuario = await usuarioRepository.findByEmail(email);
         if (!usuario) {
+            console.log("❌ Usuario no encontrado:", email);
             return res.status(400).json({ error: "Correo no registrado" });
         }
+
+        console.log("✅ Usuario encontrado en la BD:", usuario.email);
 
         // Generar un código de 6 dígitos
         const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
         const expirationDate = new Date(Date.now() + 15 * 60 * 1000); // Expira en 15 minutos
 
-        // Guardar el código en la base de datos
         await usuarioRepository.storeResetToken(usuario.usuario_id, resetCode, expirationDate);
+        console.log("✅ Código generado y almacenado en la BD:", resetCode);
 
-        // Configurar el servicio de correo
-        const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: "tucorreo@gmail.com",
-                pass: "tupassword"
-            }
-        });
-
-        // Enviar el código al correo
+        // Enviar correo
         await transporter.sendMail({
             from: "noreply@tuapp.com",
             to: email,
@@ -114,12 +117,15 @@ exports.requestPasswordReset = async (req, res) => {
             text: `Tu código de recuperación es: ${resetCode}. Expira en 15 minutos.`
         });
 
+        console.log("📩 Correo enviado a:", email);
         res.status(200).json({ message: "Código enviado a tu correo" });
 
     } catch (error) {
+        console.error("❌ Error al enviar el código:", error);
         res.status(500).json({ error: "Error al enviar el código" });
     }
 };
+
 // Endpoint para Restablecer la Contraseña
 exports.resetPassword = async (req, res) => {
     try {

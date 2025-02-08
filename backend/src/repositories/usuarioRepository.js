@@ -35,11 +35,18 @@ exports.storeRefreshToken = async (usuarioId, refreshToken) => {
 
 // Funciones de token de recuperacion
 exports.storeResetToken = async (usuarioId, resetToken, expirationDate) => {
-    return await Usuario.update(
-        { reset_token: resetToken, reset_token_expiration: expirationDate },
-        { where: { usuario_id: usuarioId } }
-    );
+    try {
+        await Usuario.update(
+            { reset_token: resetToken, reset_token_expiration: expirationDate },
+            { where: { usuario_id: usuarioId } }
+        );
+
+        console.log(`✅ Código almacenado en la BD para usuario ${usuarioId}:`, resetToken);
+    } catch (error) {
+        console.error("❌ Error al guardar el código en la BD:", error);
+    }
 };
+
 
 exports.findByResetToken = async (resetToken) => {
     return await Usuario.findOne({ where: { reset_token: resetToken } });
