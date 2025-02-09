@@ -243,55 +243,107 @@ const PagoScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleReservar = async () => {
-    try {
-      const datas = {
-        estado,
-        fecha_reserva: fechaReserva,
-        monto: total,
-        usuario_id: usuarioId,
-      };
-  
-      const reservaResponse = await axios.post('https://transporte-production.up.railway.app/api/reservas', datas);
-      console.log('Reserva enviada correctamente:', reservaResponse.data);
-  
-      const historialData = {
-        id_reserva: reservaResponse.data.id_reserva,
-        estado,
-        categoria: 'Reserva',
-        usuario_id: usuarioId,
-      }; 
-  
-      const historialResponse = await axios.post('https://transporte-production.up.railway.app/api/historial-reservas/reserva', historialData);
-      console.log('Historial de reserva creado correctamente:', historialResponse.data);
-      
-      const seatsData = {
-        numero: selectedSeats.join(','),
-        id_bus: idBus,
-        estado: 'ocupado',
-        fecha_asiento: fechaIda,
-        hora_salida: salida,
-        hora_llegada: llegada,
-      };
-      const response = await axios.post('https://transporte-production.up.railway.app/api/asientos', seatsData);
-      console.log('Asientos ocupados correctamente:', response.data);
+  const [modalReservaVisible, setModalReservaVisible] = useState(false);
+const [clientSecretReserva, setClientSecretReserva] = useState('');
 
-  
-      Alert.alert('Éxito', 'Reserva y historial registrados correctamente.');
 
-      // Generar el PDF después de la reserva
-      await printToFile('Confirmación de Reserva'); // Llamar a la función para generar el PDF
-  
-      navigation.navigate('Historial', {
-        nombre,
-        origen,
-        pasajeros: numTickets,
-      });
-    } catch (error) {
-      console.error('Error al procesar la reserva o el historial:', error);
-      Alert.alert('Error', 'Hubo un problema al procesar la reserva o el historial.');
+// Función para abrir el modal y generar un Payment Intent para la reserva
+const handlePagoConTarjetaReserva = async () => {
+  try {
+    const secret = await createPaymentIntentReserva();
+    if (secret) {
+      setClientSecretReserva(secret);
+      setModalReservaVisible(true); // Abre el modal de reserva
+    } else {
+      Alert.alert("Error", "No se pudo generar la intención de pago.");
     }
-  };
+  } catch (error) {
+    console.error("Error al iniciar la reserva:", error);
+    Alert.alert("Error", "No se pudo iniciar el proceso de reserva.");
+  }
+};
+
+// Función para confirmar el pago de la reserva y registrar la reserva en la BD
+const handleConfirmarPagoReserva = async () => {
+  if (!clientSecretReserva) {
+    const secret = await createPaymentIntentReserva();
+    if (!secret) return;
+  }
+
+  const { error, paymentIntent } = await confirmPayment(clientSecretReserva, {
+    paymentMethodType: 'Card',
+  });
+
+  if (error) {
+    Alert.alert('Error', `Pago fallido: ${error.message}`);
+    console.log('Error en el pago:', error);
+  } else if (paymentIntent) {
+    Alert.alert('Éxito', 'Reserva realizada correctamente.');
+    setModalReservaVisible(false); // Cierra el modal de reserva
+
+    await handleReservar(); // Ejecuta la reserva en la BD
+    printToFile('Confirmación de Reserva'); // Genera el PDF
+  }
+};
+
+// Función para generar el PaymentIntent de la reserva (con pago)
+const createPaymentIntentReserva = async () => {
+  try {
+    const response = await axios.post('https://transporte-production.up.railway.app/api/stripe/create-payment-intent', {
+      amount: total * 100, // Monto en centavos
+      currency: 'usd',
+    });
+
+    return response.data.clientSecret;
+  } catch (error) {
+    console.error("Error creando Payment Intent para reserva:", error);
+    Alert.alert("Error", "Hubo un problema al procesar la reserva.");
+  }
+};
+
+// Función para registrar la reserva en la BD
+const handleReservar = async () => {
+  try {
+    const reservaData = {
+      estado,
+      fecha_reserva: fechaReserva,
+      monto: total,
+      usuario_id: usuarioId,
+    };
+
+    const reservaResponse = await axios.post('https://transporte-production.up.railway.app/api/reservas', reservaData);
+    console.log('Reserva creada:', reservaResponse.data);
+
+    const historialData = {
+      id_reserva: reservaResponse.data.id_reserva,
+      estado,
+      categoria: 'Reserva',
+      usuario_id: usuarioId,
+    };
+
+    await axios.post('https://transporte-production.up.railway.app/api/historial-reservas/reserva', historialData);
+    console.log('Historial de reserva creado');
+
+    const seatsData = {
+      numero: selectedSeats.join(','),
+      id_bus: idBus,
+      estado: 'ocupado',
+      fecha_asiento: fechaIda,
+      hora_salida: salida,
+      hora_llegada: llegada,
+    };
+
+    await axios.post('https://transporte-production.up.railway.app/api/asientos', seatsData);
+    console.log('Asientos reservados');
+    await printToFile('Confirmación de Reserva');
+    Alert.alert('Éxito', 'Reserva completada con éxito.');
+    navigation.navigate('Historial', { nombre, origen, pasajeros: numTickets });
+  } catch (error) {
+    console.error('Error en la reserva:', error);
+    Alert.alert('Error', 'Hubo un problema con la reserva.');
+  }
+};
+
   
 
   return (
@@ -353,10 +405,36 @@ const PagoScreen = ({ route, navigation }) => {
           <Picker.Item label="Confirmada" value="Confirmada" />
           <Picker.Item label="Cancelada" value="Cancelada" />
         </Picker>
+        <Modal animationType="slide" transparent={true} visible={modalReservaVisible} onRequestClose={() => setModalReservaVisible(false)}>
+  <View style={styles.modalContainer}>
+    <View style={styles.modalContent}>
+      <Text style={styles.modalTitle}>Información de la Tarjeta</Text>
 
-        <TouchableOpacity style={styles.button} onPress={handleReservar}>
-          <Text style={styles.buttonText}>Reservar</Text>
+      {/* Tarjeta de pago */}
+      <CardField
+        postalCodeEnabled={false}
+        placeholders={{ number: '4242 4242 4242 4242' }}
+        onCardChange={(cardDetails) => console.log(cardDetails)}
+        style={styles.cardField}
+      />
+
+      <View style={styles.modalButtons}>
+        <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => setModalReservaVisible(false)}>
+          <Text style={styles.buttonText}>Cancelar</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={handleConfirmarPagoReserva}>
+          <Text style={styles.buttonText}>Confirmar</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
+
+
+<TouchableOpacity style={styles.button} onPress={handlePagoConTarjetaReserva}>
+  <Text style={styles.buttonText}>Reservar</Text>
+</TouchableOpacity>
+
       </ScrollView>
       
 

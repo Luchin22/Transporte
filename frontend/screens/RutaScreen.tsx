@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, Alert } from 'react-native';
 import CheckBox from 'react-native-check-box';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import axios from 'axios';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useUser } from '../context/UserContext'; // Importa el hook del contexto
-
+import { useUser } from '../context/UserContext';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import axios from 'axios';
 
 const RouteListScreen = ({ navigation, route }) => {
   const { selectedOrigin, selectedDestination } = route.params;
-    const { userData } = useUser();
-  
+  const { userData } = useUser();
 
   const [horarios, setHorarios] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -19,8 +17,7 @@ const RouteListScreen = ({ navigation, route }) => {
   const [rutas, setRutas] = useState([]);
   const [horaActual, setHoraActual] = useState('');
   const [fechaIda, setFechaIda] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const menuOptions = [
     { id: 1, name: 'Editar', screen: 'Editar', icon: 'edit' },
     { id: 2, name: 'Historial', screen: 'Historial', icon: 'history' },
@@ -28,16 +25,19 @@ const RouteListScreen = ({ navigation, route }) => {
     { id: 4, name: 'Salir', screen: 'Login', icon: 'logout' },
   ];
 
+  const cleanName = (name) => {
+    return name.replace(/[\u{0080}-\u{FFFF}]/gu, ""); // Reemplaza caracteres no ASCII extendidos
+  };
   const handleNavigation = (screen) => {
     navigation.navigate(screen, { usuario_id: userData?.usuario_id });
   };
+
   const formatFechaIda = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
-  
 
   useEffect(() => {
     const fetchRutas = async () => {
@@ -48,65 +48,39 @@ const RouteListScreen = ({ navigation, route }) => {
         console.error('Error al obtener las rutas:', error);
       }
     };
-
     fetchRutas();
   }, []);
 
-  // Lógica para actualizar horarios según la fecha seleccionada
   useEffect(() => {
     const fetchHorarios = async () => {
-      try {
-        setLoading(true);
-    
-        if (!selectedOrigin || !selectedDestination) return;
-    
-        // Buscar ruta específica según origen y destino
-        const ruta = rutas.find(
-          (r) =>
-            r.origen.trim().toLowerCase() === selectedOrigin.trim().toLowerCase() &&
-            r.destino.trim().toLowerCase() === selectedDestination.trim().toLowerCase()
-        );
-    
-        if (!ruta) {
-          console.log('No se encontró una ruta válida para el origen y destino seleccionados.');
-          return;
-        }
-    
-        // Obtener horarios con capacidad
-        const response = await axios.get('https://transporte-production.up.railway.app/api/horarios/horarios-con-capacidad');
-        const horariosConCapacidad = response.data;
-    
-        // Filtrar los horarios relacionados con la ruta seleccionada
-        const filteredHorarios = horariosConCapacidad.filter(
-          (horario) => horario.Rutum?.id_ruta === ruta.id_ruta
-        );
-    
-        console.log('Horarios filtrados:', filteredHorarios);
-    
-        // Transformar datos para mover "Conductor" al nivel superior
-        const transformedHorarios = filteredHorarios.map((item, index) => ({
-          ...item,
-          id: item.id_horario || `temp-${index}`,
-          Conductor: item.Bus?.Conductor, // Extraer "Conductor"
-          Bus: {
-            ...item.Bus,
-            Conductor: undefined, // Eliminar "Conductor" del nivel de Bus si es necesario
-          },
-        }));
-    
-        setHorarios(transformedHorarios);
-      } catch (error) {
-        console.error('Error al obtener los horarios:', error);
-      } finally {
-        setLoading(false);
+      setLoading(true);
+      if (!selectedOrigin || !selectedDestination) return;
+      const ruta = rutas.find(
+        r => r.origen.trim().toLowerCase() === selectedOrigin.trim().toLowerCase() &&
+             r.destino.trim().toLowerCase() === selectedDestination.trim().toLowerCase()
+      );
+      if (!ruta) {
+        console.log('No se encontró una ruta válida para el origen y destino seleccionados.');
+        return;
       }
+      const response = await axios.get('https://transporte-production.up.railway.app/api/horarios/horarios-con-capacidad');
+      const horariosConCapacidad = response.data;
+      const filteredHorarios = horariosConCapacidad.filter(
+        horario => horario.Rutum?.id_ruta === ruta.id_ruta
+      );
+      setHorarios(filteredHorarios.map((item, index) => ({
+        ...item,
+        id: item.id_horario || `temp-${index}`,
+        Conductor: item.Bus?.Conductor,
+        Bus: { ...item.Bus, Conductor: undefined },
+      })));
+      setLoading(false);
     };
-    
 
     if (selectedOrigin && selectedDestination && rutas.length > 0) {
-        fetchHorarios();
+      fetchHorarios();
     }
-}, [selectedOrigin, selectedDestination, rutas, fechaIda]);
+  }, [selectedOrigin, selectedDestination, rutas, fechaIda]);
 
   useEffect(() => {
     const actualizarHora = () => {
@@ -125,7 +99,9 @@ const RouteListScreen = ({ navigation, route }) => {
   }, []);
 
   const handleConfirm = () => {
-    if (selectedRow !== null) setConfirmed(true);
+    if (selectedRow !== null) {
+      setConfirmed(true);
+    }
   };
 
   const handleTicket = () => {
@@ -134,25 +110,21 @@ const RouteListScreen = ({ navigation, route }) => {
       navigation.navigate('Ticket', {
         idBus: selectedHorario.Bus.id_bus,
         capacidad: selectedHorario.Bus.capacidad,
-        numeroBus: selectedHorario.Bus.numero, // Enviar el número del bus
-        nombreConductor: selectedHorario.Conductor?.nombre_conductor, 
+        numeroBus: selectedHorario.Bus.numero,
+        nombreConductor: selectedHorario.Conductor?.nombre_conductor,
         selectedOrigin,
         selectedDestination,
         selectedRoute: selectedHorario,
         horaSalida: selectedHorario.hora_salida,
         horaLlegada: selectedHorario.hora_llegada,
-        fechaIda: formatFechaIda(fechaIda),  // Enviamos la fecha seleccionada
+        fechaIda: formatFechaIda(fechaIda),
       });
     }
   };
-  
-  
 
   const handleRowSelection = (row) => {
     const now = new Date();
     const isCurrentDate = fechaIda.toLocaleDateString('es-ES') === now.toLocaleDateString('es-ES');
-  
-    // Convertir hora actual y hora de salida a objetos Date
     const horaActualDate = new Date(
       now.getFullYear(),
       now.getMonth(),
@@ -160,7 +132,6 @@ const RouteListScreen = ({ navigation, route }) => {
       parseInt(horaActual.split(':')[0], 10),
       parseInt(horaActual.split(':')[1], 10)
     );
-  
     const [hora, minutos, segundos] = row.hora_salida.split(':').map(Number);
     const horaSalidaDate = new Date(
       fechaIda.getFullYear(),
@@ -168,57 +139,47 @@ const RouteListScreen = ({ navigation, route }) => {
       fechaIda.getDate(),
       hora,
       minutos,
-      segundos || 0 // Si no hay segundos, usar 0
+      segundos || 0
     );
-  
-    // Validar si la hora de salida es válida
+
     if (isCurrentDate && horaSalidaDate < horaActualDate) {
       Alert.alert("Fuera de tiempo", "La hora de salida ya ha pasado.");
     } else {
       setSelectedRow(selectedRow === row.id ? null : row.id);
     }
   };
-  
 
-  const handleDateChange = (event, selectedDate) => {
-    if (selectedDate) {
-      setFechaIda(selectedDate); // Actualiza la fecha seleccionada
-      // Opcional: Si quieres reiniciar la selección de horario
-      setSelectedRow(null);
-    }
-    setShowDatePicker(false); // Cierra el DateTimePicker
+  const showDatePicker = () => {
+    setDatePickerVisibility(true);
   };
-  
+
+  const handleDateChange = (date) => {
+    setFechaIda(date);
+    setDatePickerVisibility(false);
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Consulta de Disponibilidad de Horarios</Text>
-
       <Text style={styles.horarioTitle}>Horario</Text>
       <Text style={styles.horaActual}>{horaActual}</Text>
-
-      <View style={styles.datePickerContainer}>
-        <Text style={styles.datePickerLabel}>Fecha de ida</Text>
-        <TouchableOpacity
-          style={styles.dateButton}
-          onPress={() => setShowDatePicker(true)}
-        >
-          <Text style={styles.dateButtonText}>
-            {fechaIda.toLocaleDateString('es-ES')}
-          </Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            value={fechaIda}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            minimumDate={new Date()} // Solo permite fechas desde hoy en adelante
-            onChange={handleDateChange}
-          />
-        )}
-      </View>
-
-      <ScrollView style={styles.tableContainer}>
+      <TouchableOpacity
+        style={styles.dateButton}
+        onPress={showDatePicker}
+      >
+        <Text style={styles.dateButtonText}>
+          {fechaIda.toLocaleDateString('es-ES')}
+        </Text>
+      </TouchableOpacity>
+      <DateTimePickerModal
+        isVisible={isDatePickerVisible}
+        mode="date"
+        onConfirm={handleDateChange}
+        onCancel={() => setDatePickerVisibility(false)}
+        date={fechaIda}
+        minimumDate={new Date()} // Asegúrate de que no se pueda elegir una fecha anterior a la actual
+      />
+     <ScrollView style={styles.tableContainer}>
     {loading ? (
         <Text style={styles.loadingText}>Cargando horarios...</Text>
     ) : (
@@ -253,8 +214,6 @@ const RouteListScreen = ({ navigation, route }) => {
     )}
 </ScrollView>
 
-
-
       <TouchableOpacity
         style={[styles.buttonConfirm, !selectedRow && styles.disabledButton]}
         onPress={handleConfirm}
@@ -262,13 +221,11 @@ const RouteListScreen = ({ navigation, route }) => {
       >
         <Text style={styles.buttonText}>Confirmar</Text>
       </TouchableOpacity>
-
       {confirmed && (
         <TouchableOpacity style={styles.buttonBuy} onPress={handleTicket}>
           <Text style={styles.buttonText}>Comprar</Text>
         </TouchableOpacity>
       )}
-
       <View style={styles.footer}>
         <TouchableOpacity onPress={() => handleNavigation('Horario')}>
           <Icon name="home" size={30} color="black" />
@@ -283,6 +240,7 @@ const RouteListScreen = ({ navigation, route }) => {
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -296,18 +254,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginVertical: 16,
   },
-  routeDetailsContainer: {
-    marginBottom: 20,
-  },
-  routeDetailsTitle: {
-    color: '#000000',
+  horarioTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    color: '#000000',
+    textAlign: 'center',
+    marginVertical: 10,
   },
-  routeDetailsText: {
+  horaActual: {
+    fontSize: 18,
+    color: '#000000',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  datePickerContainer: {
+    marginVertical: 10,
+    alignItems: 'center',
+  },
+  datePickerLabel: {
     color: '#000000',
     fontSize: 18,
-    marginTop: 5,
+    marginBottom: 5,
+  },
+  dateButton: {
+    backgroundColor: '#000000',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  dateButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
   tableContainer: {
     marginBottom: 20,
@@ -347,6 +323,8 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 5,
     marginTop: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   disabledButton: {
     backgroundColor: '#A9A9A9',
@@ -361,6 +339,8 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 5,
     marginTop: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footer: {
     flexDirection: 'row',
@@ -370,38 +350,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#ddd',
     width: '100%',
-  },
-  horarioTitle: {
-    fontSize: 20,
-    color: '#000000',
-    textAlign: 'center',
-    marginVertical: 10,
-  },
-  horaActual: {
-    fontSize: 18,
-    color: '#000000',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  datePickerContainer: {
-    marginVertical: 10,
-    alignItems: 'center',
-  },
-  datePickerLabel: {
-    color: '#000000',
-    fontSize: 18,
-    marginBottom: 5,
-  },
-  dateButton: {
-    backgroundColor: '#000000',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-  },
-  dateButtonText: {
-    color: '#fff',
-    fontSize: 16,
-  },
+  }
 });
 
 export default RouteListScreen;

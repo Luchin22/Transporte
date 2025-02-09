@@ -18,7 +18,7 @@ const RegisterScreen = ({ navigation }) => {
       email: "",
       telefono: "",
       password: "",
-      rol_id: 4, // Default role: Usuario
+      rol_id: 4, // Rol por defecto: Usuario
     },
   });
 
@@ -33,26 +33,14 @@ const RegisterScreen = ({ navigation }) => {
         Alert.alert(
           "Registro Exitoso",
           "El usuario ha sido registrado correctamente.",
-          [
-            {
-              text: "OK",
-              onPress: () => navigation.navigate("Login"),
-            },
-          ],
+          [{ text: "OK", onPress: () => navigation.navigate("Login") }],
           { cancelable: false }
         );
       } else {
-        Alert.alert(
-          "Error",
-          response.data?.message || "Hubo un problema al registrar el usuario.",
-          [{ text: "OK" }],
-          { cancelable: false }
-        );
+        Alert.alert("Error", response.data?.message || "Error en el registro.");
       }
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.message || "No se pudo registrar el usuario.";
-      Alert.alert("Error", errorMessage, [{ text: "OK" }], { cancelable: false });
+      Alert.alert("Error", error.response?.data?.message || "No se pudo registrar el usuario.");
     }
   };
 
@@ -62,10 +50,17 @@ const RegisterScreen = ({ navigation }) => {
         <View style={styles.formContainer}>
           <Text style={styles.title}>Formulario de Registro</Text>
 
+          {/* Campo: Nombre */}
           <Controller
             control={control}
             name="nombre"
-            rules={{ required: "El nombre es obligatorio" }}
+            rules={{
+              required: "El nombre es obligatorio",
+              pattern: {
+                value: /^[A-Za-zÁÉÍÓÚáéíóúñÑ ]+$/,
+                message: "Solo se permiten letras",
+              },
+            }}
             render={({ field: { onChange, onBlur, value } }) => (
               <TextInput
                 label="Nombre"
@@ -78,14 +73,19 @@ const RegisterScreen = ({ navigation }) => {
               />
             )}
           />
-          {errors.nombre && (
-            <Text style={styles.errorText}>{errors.nombre.message}</Text>
-          )}
+          {errors.nombre && <Text style={styles.errorText}>{errors.nombre.message}</Text>}
 
+          {/* Campo: Apellido */}
           <Controller
             control={control}
             name="apellido"
-            rules={{ required: "El apellido es obligatorio" }}
+            rules={{
+              required: "El apellido es obligatorio",
+              pattern: {
+                value: /^[A-Za-zÁÉÍÓÚáéíóúñÑ ]+$/,
+                message: "Solo se permiten letras",
+              },
+            }}
             render={({ field: { onChange, onBlur, value } }) => (
               <TextInput
                 label="Apellido"
@@ -98,10 +98,9 @@ const RegisterScreen = ({ navigation }) => {
               />
             )}
           />
-          {errors.apellido && (
-            <Text style={styles.errorText}>{errors.apellido.message}</Text>
-          )}
+          {errors.apellido && <Text style={styles.errorText}>{errors.apellido.message}</Text>}
 
+          {/* Campo: Email */}
           <Controller
             control={control}
             name="email"
@@ -125,18 +124,17 @@ const RegisterScreen = ({ navigation }) => {
               />
             )}
           />
-          {errors.email && (
-            <Text style={styles.errorText}>{errors.email.message}</Text>
-          )}
+          {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
 
+          {/* Campo: Teléfono (Evita negativos y caracteres no numéricos) */}
           <Controller
             control={control}
             name="telefono"
             rules={{
               required: "El teléfono es obligatorio",
               pattern: {
-                value: /^\d{10}$/,
-                message: "Número de teléfono inválido",
+                value: /^[0-9]{10}$/,
+                message: "Debe contener 10 dígitos y solo números",
               },
             }}
             render={({ field: { onChange, onBlur, value } }) => (
@@ -144,18 +142,20 @@ const RegisterScreen = ({ navigation }) => {
                 label="Teléfono"
                 mode="outlined"
                 onBlur={onBlur}
-                onChangeText={onChange}
+                onChangeText={(text) => {
+                  const filteredText = text.replace(/[^0-9]/g, ""); // Solo permite números
+                  onChange(filteredText);
+                }}
                 value={value}
                 style={styles.input}
-                keyboardType="phone-pad"
+                keyboardType="number-pad"
                 outlineColor={errors.telefono ? "red" : "#78288c"}
               />
             )}
           />
-          {errors.telefono && (
-            <Text style={styles.errorText}>{errors.telefono.message}</Text>
-          )}
+          {errors.telefono && <Text style={styles.errorText}>{errors.telefono.message}</Text>}
 
+          {/* Campo: Contraseña con validaciones */}
           <Controller
             control={control}
             name="password"
@@ -163,7 +163,11 @@ const RegisterScreen = ({ navigation }) => {
               required: "La contraseña es obligatoria",
               minLength: {
                 value: 8,
-                message: "La contraseña debe tener al menos 8 caracteres",
+                message: "Debe tener al menos 8 caracteres",
+              },
+              pattern: {
+                value: /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/,
+                message: "Debe incluir una mayúscula, un número y un carácter especial (@$!%*?&)",
               },
             }}
             render={({ field: { onChange, onBlur, value } }) => (
@@ -179,10 +183,9 @@ const RegisterScreen = ({ navigation }) => {
               />
             )}
           />
-          {errors.password && (
-            <Text style={styles.errorText}>{errors.password.message}</Text>
-          )}
+          {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
 
+          {/* Botón de registro */}
           <Button
             mode="contained"
             onPress={handleSubmit(onSubmit)}
