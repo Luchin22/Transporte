@@ -1,24 +1,21 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-
 buildscript {
     ext {
-        buildToolsVersion = findProperty('android.buildToolsVersion') ?: '35.0.0'
-        minSdkVersion = Integer.parseInt(findProperty('android.minSdkVersion') ?: '24')
-        compileSdkVersion = Integer.parseInt(findProperty('android.compileSdkVersion') ?: '35')
-        targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '34')
-        kotlinVersion = findProperty('android.kotlinVersion') ?: '1.9.24'
+        buildToolsVersion = '31.0.0'
+        minSdkVersion = 24
+        compileSdkVersion = 31
+        targetSdkVersion = 31
+        kotlinVersion = '1.6.10'  // More stable version
 
-        ndkVersion = "26.1.10909125"
+        ndkVersion = "21.4.7075529"  // A stable NDK version
     }
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath('com.android.tools.build:gradle')
-        classpath('com.facebook.react:react-native-gradle-plugin')
-        classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
-        classpath("com.android.tools.build:gradle:8.0.2") // Usa 8.0.2 en lugar de 8.6.0
+        classpath "com.android.tools.build:gradle:7.0.4"  // More widely used version
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+classpath("com.facebook.react:react-native-gradle-plugin:x.y.z")
     }
 }
 
@@ -26,14 +23,8 @@ apply plugin: "com.facebook.react.rootproject"
 
 allprojects {
     repositories {
-        maven {
-            // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
-            url(new File(['node', '--print', "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim(), '../android'))
-        }
-        maven {
-            // Android JSC is installed from npm
-            url(new File(['node', '--print', "require.resolve('jsc-android/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim(), '../dist'))
-        }
+        maven { url "$rootDir/../node_modules/react-native/android" }
+        maven { url "$rootDir/../node_modules/jsc-android/dist" }
 
         google()
         mavenCentral()

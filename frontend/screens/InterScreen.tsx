@@ -1,28 +1,28 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';  // Usa otro tipo de íconos si lo prefieres
+import Icon from 'react-native-vector-icons/MaterialIcons';  // Puedes usar otro tipo de íconos si lo prefieres
 
-
-const App = ({navigation}) => {
-    const handleCrear = () => {
-        navigation.navigate('Crear');
-    }
-    const handleBuse = () => {
-        navigation.navigate('Buse');
-    }
-    const handleHora = () => {
-        navigation.navigate('Hora');
-    }
-    const handleGuia = () => {
-        navigation.navigate('Guia');
-    }
-
-    const handleDato = () => {
-        navigation.navigate('Dato');
-    }
+const App = ({ navigation }) => {
+  const handleCrear = () => {
+    navigation.navigate('Crear');
+  }
+  const handleBuse = () => {
+    navigation.navigate('Buse');
+  }
+  const handleHora = () => {
+    navigation.navigate('Hora');
+  }
+  const handleGuia = () => {
+    navigation.navigate('Guia');
+  }
+  const handleDato = () => {
+    navigation.navigate('Dato');
+  }
 
   return (
     <View style={styles.container}>
+            <Text style={styles.title}>Gestión</Text>
+      
       <View style={styles.row}>
         <TouchableOpacity style={styles.iconContainer} onPress={handleCrear}>
           <Icon name="person" size={50} color="#4CAF50" />
@@ -42,13 +42,13 @@ const App = ({navigation}) => {
           <Icon name="route" size={50} color="#9C27B0" />
           <Text style={styles.iconText}>Ruta</Text>
         </TouchableOpacity>
-         <TouchableOpacity
-                  style={styles.iconContainer}
-                  onPress={handleDato}
-                >
-                  <Icon name="chart-bar" size={40} color="#9C27B0" />
-                  <Text style={styles.iconText}>Análisis de Datos</Text>
-                </TouchableOpacity>
+      </View>
+      {/* Nueva fila para el botón de análisis de datos */}
+      <View style={[styles.row, { justifyContent: 'center' }]}>
+        <TouchableOpacity style={styles.iconContainer} onPress={handleDato}>
+          <Icon name="chart-bar" size={40} color="#9C27B0" />
+          <Text style={styles.iconText}>Análisis de Datos</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -61,7 +61,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     backgroundColor: '#f5f5f5',
-  },
+  },  title: { fontSize: 24, fontWeight: 'bold', color: '#000000', marginBottom: 30, textAlign: 'center', marginTop: 50 },
+
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
